@@ -12,9 +12,9 @@
 #include "test.h"
 
 bool flash_read_flag;
-bool	write_flag;
+bool write_flag;
 bool find_whilt_flag;
-bool	is_find_flag; //是否找到
+bool is_find_flag; //是否找到
 
 uint8_t	read_cmp[10][16];	//
 static	uint8_t wait_inset_buff[16];
