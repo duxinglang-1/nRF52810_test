@@ -135,5 +135,5 @@ void read_tp_id(void)
 	uint8_t tp_id = 0;
 
 	nrf_twi_rx(TP_REG_CHIPID, &tp_id, 1);
-	NRF_LOG_INFO(" tp_id:0x%x ",tp_id );
+	NRF_LOG_INFO("tp_id:0x%x ",tp_id );
 }
