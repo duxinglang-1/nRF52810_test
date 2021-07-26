@@ -126,10 +126,9 @@ void stop_task(void)
 
 //=======================================================================================
 /*
-//TP_REG_CHIPID					0xA7
+//TP_REG_CHIPID				0xA7
 //CST816_CHIP_ID			0xB4
 NRF_DRV_TWI_XFER_TX
-
 */
 void read_tp_id(void)
 {

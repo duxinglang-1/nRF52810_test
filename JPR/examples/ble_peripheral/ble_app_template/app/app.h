@@ -1,55 +1,46 @@
 #ifndef	APP_H
 #define	APP_H
 
- 
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#define RANDOM_BUFF_SIZE		16
+#define RANDOM_BUFF_SIZE	16
 #define	DEVICE_ADDRESS_LEN	(6)
 
 extern bool	judg_app_flag;
 extern uint32_t	GUARD_TIME_SECONDS;
-extern	uint8_t device_address[DEVICE_ADDRESS_LEN];
+extern uint8_t device_address[DEVICE_ADDRESS_LEN];
+extern uint8_t ble_work_status;
 
-extern	uint8_t	ble_work_status;
+/*************************************************************************************************************************
+* ID ´Ó 0xFFB0 ¿ªÊ¼
+* 0xFFB0: appºÍBLEÉè±¸Á¬½Ó¶Ï¿ªµÄID
+* 0xFFB1: »ñÈ¡MACµØÖ·
+* 0xFFB2: »ñÈ¡°æ±¾
+*
+* #define GET_NRF52810_VER_ID		0xFFB2			//»ñÈ¡52810°æ±¾ºÅ
+* #define GET_BLE_MAC_ADDR_ID		0xFFB3			//»ñÈ¡BLE MACµØÖ·
+* #define GET_BLE_STATUS_ID			0xFFB4			//»ñÈ¡BLEµ±Ç°¹¤×÷×´Ì¬	0:¹Ø±Õ 1:ĞİÃß 2:¹ã²¥ 3:Á¬½Ó
+* #define SET_BEL_WORK_MODE_ID		0xFFB5			//ÉèÖÃBLE¹¤×÷Ä£Ê½		0:¹Ø±Õ 1:´ò¿ª 2:»½ĞÑ 3:ĞİÃß
+*************************************************************************************************************************/
+extern uint8_t g_aes_in[16];	//È«¾Ö¼ÓÃÜ½âÃÜÊäÈëbuff
+extern uint8_t g_aes_out[16];	//½âÃÜÈ«¾Öbuff
+extern uint8_t aes_key[];		//16×Ö½Ú,128µÄkey¼´ÃÜÂë						
+extern uint8_t aes_iv[];		//16×Ö½Ú,128µÄIV¼´Æ«ÒÆÁ¿
 
-/*
-ID ä» 0xFFB0 å¼€å§‹
+extern bool connect_flag;
 
-0xFFB0	ï¼šapp å’ŒBLEè®¾å¤‡ï¼Œè¿æ¥æ–­å¼€çš„ID
-0xFFB1  ï¼šè·å–MACåœ°å€
-0xFFB2	ï¼š è·å–ç‰ˆæœ¬
-#define GET_NRF52810_VER_ID		0xFFB2			//è·å–52810ç‰ˆæœ¬å·
-#define GET_BLE_MAC_ADDR_ID		0xFFB3			//è·å–BLE MACåœ°å€
-#define GET_BLE_STATUS_ID			0xFFB4			//è·å–BLEå½“å‰å·¥ä½œçŠ¶æ€	0:å…³é—­ 1:ä¼‘çœ  2:å¹¿æ’­ 3:è¿æ¥
-#define SET_BEL_WORK_MODE_ID	0xFFB5			//è®¾ç½®BLEå·¥ä½œæ¨¡å¼		0:å…³é—­ 1:æ‰“å¼€ 2:å”¤é†’ 3:ä¼‘çœ 
-*/
-
- 
-
-
-extern	uint8_t	g_aes_in[16]; //å…¨å±€åŠ å¯†è§£å¯†è¾“å…¥buff
-extern	uint8_t	g_aes_out[16];//è§£å¯†å…¨å±€buff
-extern  uint8_t aes_key[];//16å­—èŠ‚ï¼Œ128çš„key å³å¯†ç 								
-extern  uint8_t aes_iv[];//16å­—èŠ‚ï¼Œ128çš„IV å³åç§»é‡	
-
-extern	bool connect_flag;
-
-uint32_t whitelist_response(char pbuff[],uint16_t	cmd_id);
+uint32_t whitelist_response(char pbuff[], uint16_t cmd_id);
 void test_random(void);
-void send_data_app(uint8_t	*pbuff,uint16_t	pdata_len);
+void send_data_app(uint8_t *pbuff, uint16_t pdata_len);
 void send_random_app(void);
 void Whitelist_exists(void);
 void init_sec(void);
 void init_keyset(void);
-
 void disconnect_app(void);
 
 uint32_t guard_time_init(void);

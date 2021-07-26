@@ -6,20 +6,16 @@
 #include <stdbool.h>
 #include "nrf_drv_twi.h"
 
-#define TP_SCL_PIN             (5)    // SCL signal pin 5
-#define TP_SDA_PIN             (6)    // SDA signal pin 6
-
-#define TP_EINT_PIN             (9)    // ‰∏≠Êñ≠ signal pin
-#define TP_RSET_PIN             (10)   // Â§ç‰Ωç signal pin
+#define TP_SCL_PIN	(5)    //SCL signal pin 5
+#define TP_SDA_PIN	(6)    //SDA signal pin 6
+#define TP_EINT_PIN	(9)    //÷–∂œ signal pin
+#define TP_RSET_PIN	(10)   //∏¥Œª signal pin
  
-#define	TP_I2C_ADD					(0x15)
-
+#define	TP_I2C_ADD	(0x15)
 
 void nrf_twi_rx(uint8_t reg_addr,uint8_t *p_data,uint8_t length);
 void nrf_twi_tx(uint8_t reg_addr,uint8_t reg_value);
 void read_tp_id(void);
-void twi_init (void);
-
-
+void twi_init(void);
 
 #endif
