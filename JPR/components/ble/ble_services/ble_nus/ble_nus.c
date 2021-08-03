@@ -305,7 +305,6 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init)
     add_char_params.read_access       = SEC_OPEN;
     add_char_params.write_access      = SEC_OPEN;
     add_char_params.cccd_write_access = SEC_OPEN;
-	 
 
     return characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->tx_handles);
     /**@snippet [Adding proprietary characteristic to the SoftDevice] */
