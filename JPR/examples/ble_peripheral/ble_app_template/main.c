@@ -78,6 +78,8 @@
 #include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
 #include "ble_nus.h"
+#include "ble_gap.h"
+#include "ble_hids.h"
 
 #include "app_uart.h"
 
@@ -87,7 +89,6 @@
 #if defined (UARTE_PRESENT)
 #include "nrf_uarte.h"
 #endif
-
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -101,26 +102,15 @@
 #include "nrf_delay.h"
 #include "feng_twi.h"
 #include "nrf_drv_gpiote.h"
-
-
-
-#include "ble_gap.h"
 #include "nrf_drv_rng.h"
 #include "nrf_drv_wdt.h"
- 
-#include "ble_hids.h"
- 
+
  
 //=======================================================
-
-
-//#define DEVICE_NAME                   "Nordic_Template"                       /**< Name of device. Will be included in the advertising data. */
-#define DEVICE_NAME                    	"JPR_Watch_TEST"
-//#define DEVICE_NAME                   "R Senior Watch01"
- 
+#define DEVICE_NAME                   	"R Senior Watch01"	//"JPR_Watch_TEST" "Nordic_Template"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL                500                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
+#define APP_ADV_INTERVAL                500                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION                0 //18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
