@@ -164,6 +164,9 @@
 #define MAX_BUFFER_ENTRIES                  5   
 #define INPUT_REPORT_KEYS_MAX_LEN           8   
 
+#define PACKET_HEAD	0xAB
+#define PACKET_END	0x88
+
 static bool tp_trige_flag = false;
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
@@ -332,7 +335,7 @@ uint32_t whitelist_response(char pbuff[], uint16_t cmd_id)
 	
 	if(cmd_id == 0xFF59)  
 	{  
-		buff[0]=0xAB ;
+		buff[0]=PACKET_HEAD ;
 		buff[1]=0x00 ;
 		buff[2]=0x05 ;
 		
@@ -344,7 +347,7 @@ uint32_t whitelist_response(char pbuff[], uint16_t cmd_id)
 		for(uint8_t i=0;i<7;i++)
 			buff[7]=buff[7]+buff[i] ;//crc
 		
-		buff[8]=0x88 ;
+		buff[8]=PACKET_END ;
 		sendlength = 9 ;
 		error = ble_nus_data_send(&m_nus, buff, &sendlength, m_conn_handle);
 		NRF_LOG_INFO("error:%x",error);
@@ -360,7 +363,7 @@ void ack_find(bool is_find_flag)
 	
 	memset(buff,0,sizeof(buff));
 	
-	buff[0]=0xAB;
+	buff[0]=PACKET_HEAD;
 	buff[1]=0x00;
 	buff[2]=0x08;
 	
@@ -375,7 +378,7 @@ void ack_find(bool is_find_flag)
 	for(uint8_t i=0;i<7;i++)
 		buff[8]=buff[8]+buff[i] ;//crc
 	  
-	buff[9]=0x88;
+	buff[9]=PACKET_END;
 	sendlength = 10;
 	error = ble_nus_data_send(&m_nus, buff, &sendlength, m_conn_handle);
 	NRF_LOG_INFO("error:%x",error);
@@ -423,11 +426,11 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 			write_flag = true;
 			NRF_LOG_INFO("check rand num success!");
 		}	
-		else if((buff[0] == 0xAB)&&(buff[p_evt->params.rx_data.length-1] != 0x88))
+		else if((buff[0] == PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] != PACKET_END))
 		{
 			memcpy(temp, buff, packet_len);
 		}
-		else if((buff[0] != 0xAB)&&(buff[p_evt->params.rx_data.length-1] == 0x88))
+		else if((buff[0] != PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] == PACKET_END))
 		{
 			memcpy(temp+20, buff, packet_len);
 			actual_length = packet_len+20;
@@ -440,7 +443,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 				NRF_LOG_INFO("buff[%d]:%x", i, buff[i]);
 			}
 		}
-		else if((buff[0] == 0xAB)&&(buff[p_evt->params.rx_data.length-1] == 0x88))
+		else if((buff[0] == PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] == PACKET_END))
 		{
 			NRF_LOG_INFO("packet_len:%d", p_evt->params.rx_data.length);
 			actual_length = p_evt->params.rx_data.length;
@@ -455,7 +458,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 			disconnect_app();//验证随机数,APP加密后不相符,断开连接
 		} 
 
-		if((buff[0] == 0xAB)&&(buff[actual_length-1] == 0x88))
+		if((buff[0] == PACKET_HEAD)&&(buff[actual_length-1] == PACKET_END))
 		{
 			data_len = ((buff[1]<<8)|buff[2]);
 			command_id = (buff[3]<<8|buff[4]);
@@ -883,7 +886,7 @@ static void	app_connect(void)
  	uint32_t i,len=0;
 	
 	//head
-	Push_conne[len++] = 0xAB;
+	Push_conne[len++] = PACKET_HEAD;
 	//len
 	Push_conne[len++] = 0x00;
 	Push_conne[len++] = 0x06;
@@ -897,7 +900,7 @@ static void	app_connect(void)
 	//crc
 	Push_conne[len++] = 0x00;
 	//end
-	Push_conne[len++] = 0x88;
+	Push_conne[len++] = PACKET_END;
 
 	for(i=0;i<(len-2);i++)
 		Push_conne[len-2] += Push_conne[i];
@@ -912,7 +915,7 @@ static void	app_disconnect(void)
 	uint32_t i,len=0;
 
 	//head
-	Push_conne[len++] = 0xAB;
+	Push_conne[len++] = PACKET_HEAD;
 	//len
 	Push_conne[len++] = 0x00;
 	Push_conne[len++] = 0x06;
@@ -926,7 +929,7 @@ static void	app_disconnect(void)
 	//crc
 	Push_conne[len++] = 0x00;
 	//end
-	Push_conne[len++] = 0x88;
+	Push_conne[len++] = PACKET_END;
 
 	for(i=0;i<(len-2);i++)
 		Push_conne[len-2] += Push_conne[i];
@@ -1506,12 +1509,18 @@ void uart_event_handle(app_uart_evt_t * p_event)
 	{
 	case APP_UART_DATA_READY:
 		while(app_uart_get(&cr) == NRF_SUCCESS)
-		{ 
+		{
 			data_array[rec_len++] = cr;
 			//NRF_LOG_INFO("[%s] rec_len:%d, cr:%x", __func__, rec_len, cr);
+			
+			if(data_array[0] != PACKET_HEAD)
+			{
+				NRF_LOG_INFO("[%s] receive data is valid!", __func__);
+				rec_len = 0;
+			}
 		}
 
-		if((data_array[0] == 0xAB)&&(data_array[rec_len-1] == 0x88))
+		if((data_array[0] == PACKET_HEAD)&&(data_array[rec_len-1] == PACKET_END))
 		{
 			data_len = ((data_array[1]<<8)|data_array[2]);
 			rx_cmd_id = (data_array[3]<<8|data_array[4]);
@@ -1685,7 +1694,7 @@ int main(void)
 		if(tp_trige_flag)
 		{
 			tp_trige_flag = false;
-			//tp_interrupt_handler();
+			tp_interrupt_handler();
 		}
 
 		if(connect_flag)
