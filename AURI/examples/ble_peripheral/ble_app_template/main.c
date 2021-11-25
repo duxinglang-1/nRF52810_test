@@ -125,7 +125,7 @@
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
 #define SEC_PARAM_BOND                  1                                       /**< Perform bonding. */
-#define SEC_PARAM_MITM                  0     /**< Man In The Middle protection not required. */
+#define SEC_PARAM_MITM                  0     									/**< Man In The Middle protection not required. */
 #define SEC_PARAM_LESC                  0                                       /**< LE Secure Connections not enabled. */
 #define SEC_PARAM_KEYPRESS              0                                       /**< Keypress notifications not enabled. */
 #define SEC_PARAM_IO_CAPABILITIES       BLE_GAP_IO_CAPS_NONE                    /**< No I/O capabilities. */
@@ -161,8 +161,7 @@ bool uartflag = false;
 bool connectflag = false;
 bool disconnectflag =false;
 bool senddataflag = false;
-bool uart_sleep_flag = false;
-bool uart_wake_flag = false;
+bool uart_wake_flag = true;
 
 static void uart_init(void);
 
@@ -278,14 +277,16 @@ static void gap_params_init(void)
 /**@brief Function for handling events from the GATT library. */
 void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
 {
-    if ((m_conn_handle == p_evt->conn_handle) && (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED))
+    if((m_conn_handle == p_evt->conn_handle) && (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED))
     {
         m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
-        NRF_LOG_INFO("Data len is set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
+        NRF_LOG_INFO("[%s] Data len is set to:%d", __func__, m_ble_nus_max_data_len);
     }
-    NRF_LOG_DEBUG("ATT MTU exchange completed. central 0x%x peripheral 0x%x",
-                  p_gatt->att_mtu_desired_central,
-                  p_gatt->att_mtu_desired_periph);
+	
+    NRF_LOG_DEBUG("[%s] ATT MTU exchange completed. central 0x%x peripheral 0x%x", 
+					__func__,
+                  	p_gatt->att_mtu_desired_central,
+                  	p_gatt->att_mtu_desired_periph);
 }
 
 /**@brief Function for initializing the GATT module.
@@ -294,7 +295,7 @@ static void gatt_init(void)
 {
 	ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, gatt_evt_handler);
 	APP_ERROR_CHECK(err_code);
-	
+
 	err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, NRF_SDH_BLE_GATT_MAX_MTU_SIZE);
 	APP_ERROR_CHECK(err_code);
 }
@@ -1072,6 +1073,18 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 		break;
 		
 	case BLE_GAP_EVT_DISCONNECTED:
+		switch(p_ble_evt->evt.gap_evt.params.disconnected.reason)
+		{
+		case BLE_HCI_CONNECTION_TIMEOUT:
+			NRF_LOG_INFO("[%s] Disconnected: connection timeout.", __func__);
+			break;
+		case BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION:
+			NRF_LOG_INFO("[%s] Disconnected: user terminated connection.", __func__);
+			break;
+		default:
+			NRF_LOG_INFO("[%s] Disconnected: other reason(%02X)", __func__, p_ble_evt->evt.gap_evt.params.disconnected.reason);
+			break;
+		}
 		NRF_LOG_INFO("Disconnected.");
 		disconnectflag = true;
 		break;
@@ -1082,57 +1095,65 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 		break;
 		
 	case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+		NRF_LOG_INFO("[%s] src param request.", __func__);
+		
 	#if PM_BOND_SWITCH
-		NRF_LOG_INFO(" receive pair req."); 
-		NRF_LOG_INFO(" step_counter:%d",++step_counter);
+		NRF_LOG_INFO("receive pair req."); 
+		NRF_LOG_INFO("step_counter:%d",++step_counter);
 		init_sec();
 		sd_ble_gap_sec_params_reply(m_conn_handle,BLE_GAP_SEC_STATUS_SUCCESS,&g_pair_params,&keyset);
 	#endif
 		break;
-		
+	
 	case BLE_GAP_EVT_SEC_INFO_REQUEST:
+		NRF_LOG_INFO("[%s] sec info update.", __func__);
+		
 	#if PM_BOND_SWITCH
 		NRF_LOG_INFO("step:%d", ++step_counter);
-		NRF_LOG_INFO("enc_need;%d  id_need:%d sign need:%d",
-		p_ble_evt->evt.gap_evt.params.sec_info_request.enc_info,
-		p_ble_evt->evt.gap_evt.params.sec_info_request.id_info,
-		p_ble_evt->evt.gap_evt.params.sec_info_request.sign_info);
+		NRF_LOG_INFO("enc_need:%d, id_need:%d, sign need:%d",
+						p_ble_evt->evt.gap_evt.params.sec_info_request.enc_info,
+						p_ble_evt->evt.gap_evt.params.sec_info_request.id_info,
+						p_ble_evt->evt.gap_evt.params.sec_info_request.sign_info);
 
-		NRF_LOG_INFO(" RSP: LTK: "  );
 		for(int i=0;i<my_enc_key.enc_info.ltk_len;i++)
 		{
-			NRF_LOG_INFO("%x",my_enc_key.enc_info.ltk[i]); 
+			NRF_LOG_INFO("LTK[%d]:%x", i, my_enc_key.enc_info.ltk[i]); 
 		}
 
-		NRF_LOG_INFO("EDIV:%x RAMD",
-		p_ble_evt->evt.gap_evt.params.sec_info_request.master_id.ediv); 
+		NRF_LOG_INFO("EDIV:%x", p_ble_evt->evt.gap_evt.params.sec_info_request.master_id.ediv); 
 
 		for(int i=0;i<8;i++)
 		{
-			NRF_LOG_INFO("%x", p_ble_evt->evt.gap_evt.params.sec_info_request.master_id.rand[i]);
+			NRF_LOG_INFO("rand[%d]:%x", i, p_ble_evt->evt.gap_evt.params.sec_info_request.master_id.rand[i]);
 		}
-		sd_ble_gap_sec_info_reply(m_conn_handle,&my_enc_key.enc_info,NULL,NULL);
-	#endif
-		break;
-		
-	case BLE_GAP_EVT_PASSKEY_DISPLAY:
-	#if PM_BOND_SWITCH
-		NRF_LOG_INFO(" step:%d",++step_counter );
-		NRF_LOG_INFO("  feng PASSKEY:"); 
-		for(uint8_t i=0;i<6;i++)
-		{
-			NRF_LOG_INFO("%c",p_ble_evt->evt.gap_evt.params.passkey_display.passkey[i]);
-		}
+		sd_ble_gap_sec_info_reply(m_conn_handle,&my_enc_key.enc_info, NULL, NULL);
 	#endif
 		break;
 
+	case BLE_GAP_EVT_PASSKEY_DISPLAY:
+		NRF_LOG_INFO("[%s] passkey display.", __func__);
+		
+	#if PM_BOND_SWITCH
+		NRF_LOG_INFO("step:%d",++step_counter );
+		NRF_LOG_INFO("feng PASSKEY:"); 
+		for(uint8_t i=0;i<6;i++)
+		{
+			NRF_LOG_INFO("%c",p_ble_evt->evt.gap_evt.params.passkey_display.passkey[i]);			 
+		}
+	#endif
+		break;
+	
 	case BLE_GAP_EVT_KEY_PRESSED:
+		NRF_LOG_INFO("[%s] key pressed.", __func__);
 		break;
 		
 	case BLE_GAP_EVT_LESC_DHKEY_REQUEST:
+		NRF_LOG_INFO("[%s] dhkey request.", __func__);
 		break;
-
+		
 	case BLE_GAP_EVT_AUTH_STATUS:
+		NRF_LOG_INFO("[%s] auth status.", __func__);
+		
 	#if PM_BOND_SWITCH
 		NRF_LOG_INFO(" step:%d",++step_counter ); 
 		NRF_LOG_INFO(" keyset dispatch done");  
@@ -1157,40 +1178,46 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			NRF_LOG_INFO("[%s] PHY update request.", __func__);
 			ble_gap_phys_t const phys =
 			{
-			.rx_phys = BLE_GAP_PHY_AUTO,
-			.tx_phys = BLE_GAP_PHY_AUTO,
+				.rx_phys = BLE_GAP_PHY_AUTO,
+				.tx_phys = BLE_GAP_PHY_AUTO,
 			};
 			err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
 			APP_ERROR_CHECK(err_code);
 		}
 		break;
-
+		
+	case BLE_GAP_EVT_PHY_UPDATE:
+		NRF_LOG_INFO("[%s] PHY update.", __func__);
+		break;
+		
 	case BLE_GAP_EVT_ADV_SET_TERMINATED:
+		NRF_LOG_INFO("[%s] adv set terminated.", __func__);
+		ble_gap_phys_t const phys =
 		{
-			NRF_LOG_DEBUG("PHY update request.");
-			ble_gap_phys_t const phys =
-			{
 			.rx_phys = BLE_GAP_PHY_AUTO,
 			.tx_phys = BLE_GAP_PHY_AUTO,
-			};
-			err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
-			APP_ERROR_CHECK(err_code);
-		}
-		break;
-
-	case BLE_GATTC_EVT_TIMEOUT:
-		// Disconnect on GATT Client timeout event.
-		NRF_LOG_DEBUG("GATT Client Timeout.");
-		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
-		BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+		};
+		err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
 		APP_ERROR_CHECK(err_code);
 		break;
 
+	case BLE_GATTC_EVT_EXCHANGE_MTU_RSP:
+		NRF_LOG_INFO("[%s] gattc evt exchange mtu rsp.", __func__);
+		break;
+		
+	case BLE_GATTC_EVT_TIMEOUT:
+		NRF_LOG_INFO("[%s] gattc evt timeout.", __func__);
+		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+		APP_ERROR_CHECK(err_code);
+		break;
+
+	case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
+		NRF_LOG_INFO("[%s] gatts evt exchange mtu request.", __func__);
+		break;
+
 	case BLE_GATTS_EVT_TIMEOUT:
-		// Disconnect on GATT Server timeout event.
-		NRF_LOG_DEBUG("GATT Server Timeout.");
-		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
-		BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+		NRF_LOG_INFO("[%s] gatts evt timeout.", __func__);
+		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
 		APP_ERROR_CHECK(err_code);
 		break;
 
@@ -1235,22 +1262,22 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
     pm_handler_on_pm_evt(p_evt); //配对绑定的提示信息
     pm_handler_flash_clean(p_evt);
 
-    switch (p_evt->evt_id)
-	{
+    switch(p_evt->evt_id)
+	{	
 	case PM_EVT_BONDED_PEER_CONNECTED:
-		NRF_LOG_INFO("PM_EVT_BONDED_PEER_CONNECTED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_BONDED_PEER_CONNECTED", __func__);
 		break;
-
+		
 	case PM_EVT_CONN_SEC_START:
-		NRF_LOG_INFO("PM_EVT_CONN_SEC_START\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_START", __func__);
 		break;
 
 	case PM_EVT_CONN_SEC_SUCCEEDED:
-		NRF_LOG_INFO("PM_EVT_CONN_SEC_SUCCEEDED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_SUCCEEDED", __func__);
 		break;
 
 	case PM_EVT_CONN_SEC_FAILED:
-		NRF_LOG_INFO("PM_EVT_CONN_SEC_FAILED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_FAILED", __func__);
 		break;
 
 	case PM_EVT_CONN_SEC_CONFIG_REQ:
@@ -1263,69 +1290,73 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 		break; 
 
 	case PM_EVT_CONN_SEC_PARAMS_REQ:
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_PARAMS_REQ", __func__);
 		break;
 
 	case PM_EVT_STORAGE_FULL:
-		NRF_LOG_INFO("PM_EVT_STORAGE_FULL\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_STORAGE_FULL", __func__);
 		break;
-		
+
 	case PM_EVT_ERROR_UNEXPECTED:
-		NRF_LOG_INFO("PM_EVT_ERROR_UNEXPECTED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_SUCCEEDED", __func__);
 		break;
 
 	case PM_EVT_PEER_DATA_UPDATE_SUCCEEDED:
-		NRF_LOG_INFO("PM_EVT_PEER_DATA_UPDATE_SUCCEEDED\r\n");
-		break;
+		//配对绑定后，会输出该提示信息
+		NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_SUCCEEDED", __func__);
+		break; 
 
 	case PM_EVT_PEER_DATA_UPDATE_FAILED:
-		NRF_LOG_INFO("PM_EVT_PEER_DATA_UPDATE_FAILED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_PEER_DATA_UPDATE_FAILED", __func__);
 		break;  
 
 	case PM_EVT_PEER_DELETE_SUCCEEDED:
-		NRF_LOG_INFO("PM_EVT_PEER_DELETE_SUCCEEDED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_PEER_DELETE_SUCCEEDED", __func__);
 		break;  
 
 	case PM_EVT_PEER_DELETE_FAILED:
-		NRF_LOG_INFO("PM_EVT_PEER_DELETE_FAILED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_PEER_DELETE_FAILED", __func__);
 		break;
 
 	case PM_EVT_PEERS_DELETE_SUCCEEDED:
+		NRF_LOG_INFO("[%s] PM_EVT_PEERS_DELETE_SUCCEEDED", __func__);
 		advertising_start(false);
 		break; 
 
 	case PM_EVT_PEERS_DELETE_FAILED:
-		NRF_LOG_INFO("PM_EVT_PEERS_DELETE_FAILED\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_PEERS_DELETE_FAILED", __func__);
+		break;  
 
 	case PM_EVT_LOCAL_DB_CACHE_APPLIED:
-		NRF_LOG_INFO("PM_EVT_LOCAL_DB_CACHE_APPLIED\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_LOCAL_DB_CACHE_APPLIED", __func__);
+		break;  
 
 	case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED:
-		NRF_LOG_INFO("PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED", __func__);
+		break;  
 
 	case PM_EVT_SERVICE_CHANGED_IND_SENT:
-		NRF_LOG_INFO("PM_EVT_SERVICE_CHANGED_IND_SENT\r\n");
-		break;
-		
+		NRF_LOG_INFO("[%s] PM_EVT_SERVICE_CHANGED_IND_SENT", __func__);
+		break;  
+
 	case PM_EVT_SERVICE_CHANGED_IND_CONFIRMED:
-		NRF_LOG_INFO("PM_EVT_SERVICE_CHANGED_IND_CONFIRMED\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_SERVICE_CHANGED_IND_CONFIRMED", __func__);
+		break;  
 
 	case PM_EVT_SLAVE_SECURITY_REQ:
-		NRF_LOG_INFO("PM_EVT_SLAVE_SECURITY_REQ\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_SLAVE_SECURITY_REQ", __func__);
+		break;  
 
 	case PM_EVT_FLASH_GARBAGE_COLLECTED:
-		NRF_LOG_INFO("PM_EVT_FLASH_GARBAGE_COLLECTED\r\n");
-		break;
+		NRF_LOG_INFO("[%s] PM_EVT_FLASH_GARBAGE_COLLECTED", __func__);
+		break;  
 
 	case PM_EVT_FLASH_GARBAGE_COLLECTION_FAILED:
-		NRF_LOG_INFO("PM_EVT_FLASH_GARBAGE_COLLECTION_FAILED\r\n");
+		NRF_LOG_INFO("[%s] PM_EVT_FLASH_GARBAGE_COLLECTION_FAILED", __func__);
 		break;
 
 	default:
+		NRF_LOG_INFO("[%s] default evt_id:%d", __func__, p_evt->evt_id);
 		break;
 	}
 }
@@ -1384,28 +1415,31 @@ static void delete_bonds(void)
  */
 static void bsp_event_handler(bsp_event_t event)
 {
-    ret_code_t err_code;
+	ret_code_t err_code;
 
-    switch (event)
+	switch(event)
 	{
 	case BSP_EVENT_SLEEP:
+		NRF_LOG_INFO("[%s] BSP_EVENT_SLEEP", __func__);
 		//sleep_mode_enter(); //按钮触发进入睡眠模式。
 		break;
 
 	case BSP_EVENT_DISCONNECT:
+		NRF_LOG_INFO("[%s] BSP_EVENT_DISCONNECT", __func__);
 		err_code = sd_ble_gap_disconnect(m_conn_handle,
-	                 BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-		if(err_code != NRF_ERROR_INVALID_STATE)
+	                         BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+		if (err_code != NRF_ERROR_INVALID_STATE)
 		{
 			APP_ERROR_CHECK(err_code);
 		}
 		break;
 
 	case BSP_EVENT_WHITELIST_OFF:
-		if(m_conn_handle == BLE_CONN_HANDLE_INVALID)
+		NRF_LOG_INFO("[%s] BSP_EVENT_WHITELIST_OFF", __func__);
+		if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
 		{
 			err_code = ble_advertising_restart_without_whitelist(&m_advertising);
-			if(err_code != NRF_ERROR_INVALID_STATE)
+			if (err_code != NRF_ERROR_INVALID_STATE)
 			{
 				APP_ERROR_CHECK(err_code);
 			}
@@ -1413,6 +1447,7 @@ static void bsp_event_handler(bsp_event_t event)
 		break;
 
 	default:
+		NRF_LOG_INFO("[%s] default event:%d", __func__, event);
 		break;
 	}
 }
@@ -1655,7 +1690,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
 /**@snippet [UART Initialization] */
 static void uart_init(void)
 {
-    uint32_t                     err_code;
+    uint32_t err_code;
     app_uart_comm_params_t const comm_params =
     {
         .rx_pin_no    = RX_PIN_NUMBER,
@@ -1733,7 +1768,7 @@ int main(void)
 	guard_time_init();
 
 	//Start execution.
-	NRF_LOG_INFO("Template example started.");
+	NRF_LOG_INFO("main started.");
 	application_timers_start();
 
 	advertising_start(false);	 
@@ -1760,13 +1795,14 @@ int main(void)
 	APP_ERROR_CHECK(err_code);
 
 	//Enter main loop.
-	for(;;)
+
+	while(1)
 	{
 		nrf_drv_wdt_channel_feed(m_channel_id);
 
-		if(connect_flag == true)
+		if(connect_flag)
 		{  
-			connect_flag  = false; 
+			connect_flag = false; 
 			send_random_app();			
 		}
 
@@ -1796,19 +1832,17 @@ int main(void)
 	}
 }
 
-//发送测试
 void send_data(void)
 {
 	uint32_t error;
 	uint16_t data_len = 32;
-	uint8_t out[]={	0x28, 0x86, 0x6A ,0x9D ,0x94 ,0xE8, 0x1C, 0x50  ,0x40, 0x61, 0x01, 0xBC, 0x1A, 0x22 ,0xD5, 0x04, 
-									0x95 ,0xFE ,0xA3 ,0xD6 , 0x3D ,0x24 ,0xEE ,0xFC,  0x2E ,0x03 ,0xDC ,0xA3 ,0x3B ,0x95, 0xCF, 0xF1};
+	uint8_t out[] = {0x28, 0x86, 0x6A, 0x9D, 0x94, 0xE8, 0x1C, 0x50, 0x40, 0x61, 0x01, 0xBC, 0x1A, 0x22, 0xD5, 0x04, 
+					 0x95, 0xFE, 0xA3, 0xD6, 0x3D, 0x24, 0xEE, 0xFC, 0x2E, 0x03, 0xDC, 0xA3, 0x3B, 0x95, 0xCF, 0xF1};
 	error = ble_nus_data_send(&m_nus, out, &data_len, m_conn_handle);
-	NRF_LOG_INFO(" feng feng feng :%x \r\n",error);
- 
+	NRF_LOG_INFO("[%s] error:%x", __func__, error);
 }
 
-void send_data_app(uint8_t	*pbuff,uint16_t	pdata_len)
+void send_data_app(uint8_t *pbuff, uint16_t	pdata_len)
 {
 	uint32_t error;
  
@@ -1849,6 +1883,7 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin,nrf_gpiote_polarity_t action)
 	if(!uart_wake_flag)
 	{
 		uart_init();
+		uart_wake_flag = true;
 	}
 	else
 	{
@@ -1882,14 +1917,21 @@ void senddatato_9160(void)
 	if(connectflag)
 	{
 		connectflag = false;
-		uart_init();
 
+		if(!uart_wake_flag)
+		{
+			uart_init();
+			uart_wake_flag = true;
+		}
+		else
+		{
+			app_timer_stop(UART_TIME_id);
+			app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
+		}
+		
 		nrf52810_outio_irq();
 		app_connect();
 		judg_app_flag = true;
-
-		err_code = app_timer_start(UART_TIME_id, APP_TIMER_TICKS(10), NULL);
-		APP_ERROR_CHECK(err_code);
 	}
 
 	if(disconnectflag)	
@@ -1899,7 +1941,7 @@ void senddatato_9160(void)
 		if(!uart_wake_flag)
 		{
 			uart_init();
-			nrf52810_outio_irq();
+			uart_wake_flag =true;
 		}
 		else
 		{
@@ -1907,13 +1949,10 @@ void senddatato_9160(void)
 			app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
 		}
 
+		nrf52810_outio_irq();
 		app_disconnect();
 		GUARD_TIME_SECONDS = 0;
 		judg_app_flag = false;
-
-		app_timer_stop(UART_TIME_id);
-		err_code = app_timer_start(UART_TIME_id, APP_TIMER_TICKS(10), NULL);
-		APP_ERROR_CHECK(err_code);
 	}
 
 	if(senddataflag)
@@ -2009,7 +2048,6 @@ void senddatato_9160(void)
 					{
 						uart_init();
 						uart_wake_flag = true;
-						nrf52810_outio_irq();
 					}
 					else
 					{
@@ -2017,6 +2055,8 @@ void senddatato_9160(void)
 						app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
 					}
 
+					nrf52810_outio_irq();
+					
 					for(uint32_t i = 0; i < actual_length; i++)
 					{
 						do
@@ -2030,11 +2070,7 @@ void senddatato_9160(void)
 							}
 						}while(err_code == NRF_ERROR_BUSY);
 					}
-					NRF_LOG_INFO(" Tx uart over!  ");
-
-					app_timer_stop(UART_TIME_id);
-					err_code = app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-					APP_ERROR_CHECK(err_code);
+					NRF_LOG_INFO("Tx uart over!");
 				}
 
 				//清零准备接收下一条
