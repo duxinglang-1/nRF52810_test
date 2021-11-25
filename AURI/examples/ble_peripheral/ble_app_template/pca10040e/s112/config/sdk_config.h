@@ -5166,7 +5166,6 @@
 
 #ifndef UART_EASY_DMA_SUPPORT
 #define UART_EASY_DMA_SUPPORT 1
-
 #endif
 
 // <q> UART_LEGACY_SUPPORT  - Driver supporting Legacy mode
@@ -10514,9 +10513,9 @@
 //==========================================================
 // <o> NRF_SDH_CLOCK_LF_SRC  - SoftDevice clock source.
  
-// <0=> NRF_CLOCK_LF_SRC_RC 
-// <1=> NRF_CLOCK_LF_SRC_XTAL 
-// <2=> NRF_CLOCK_LF_SRC_SYNTH 
+// <0=> NRF_CLOCK_LF_SRC_RC     // 内部时钟源
+// <1=> NRF_CLOCK_LF_SRC_XTAL   // 外部晶振源
+// <2=> NRF_CLOCK_LF_SRC_SYNTH   // 合成时钟源
 
 #ifndef NRF_SDH_CLOCK_LF_SRC
 #define NRF_SDH_CLOCK_LF_SRC 1
