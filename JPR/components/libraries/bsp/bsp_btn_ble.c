@@ -164,7 +164,6 @@ static uint32_t advertising_buttons_configure()
  */
 static void startup_event_extract(bsp_event_t * p_startup_event)
 {
- #if 0
     // React to button states
     if (bsp_button_is_pressed(BTN_ID_WAKEUP_BOND_DELETE))
     {
@@ -178,7 +177,6 @@ static void startup_event_extract(bsp_event_t * p_startup_event)
     {
         *p_startup_event = BSP_EVENT_NOTHING;
     }
-	#endif
 }
 
 

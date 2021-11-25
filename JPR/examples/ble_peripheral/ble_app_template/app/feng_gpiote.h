@@ -1,14 +1,15 @@
 #ifndef	FENG_GPIOTE_H
 #define	FENG_GPIOTE_H
 
-#define TP_SCL_PIN             (5)    // SCL signal pin 5
-#define TP_SDA_PIN             (6)    // SDA signal pin 6
+#include <stdint.h>
 
-#define TP_EINT_PIN             (9)    //interupt signal pin
-#define TP_RSET_PIN             (10)   //reset signal pin
- 
-#define TP_I2C_ADDRESS	 	0x15
-#define TP_CHIP_ID		  	0xB4
+#define TP_SCL_PIN			(5)
+#define TP_SDA_PIN			(6)
+#define TP_EINT_PIN			(9)
+#define TP_RSET_PIN			(10)
+
+#define TP_I2C_ADDRESS		0x15
+#define TP_CHIP_ID			0xB4
 
 #define TP_REG_GESTURE				0x01
 #define TP_REG_FINGER_NUM			0x02
@@ -55,6 +56,9 @@
 #define GESTURE_DOUBLE_CLICK	0x0B
 #define GESTURE_LONG_PRESS		0x0C
 
+extern uint8_t systemStartFlag;
+extern uint8_t bootloaderMode;
+
 typedef enum
 {
 	TP_EVENT_MOVING_UP,
@@ -69,5 +73,6 @@ typedef enum
 
 void tp_interrupt_handler(void);
 void Nrf52810_Uart_Send_Data_Test(void);
+void system_upgrade_info_send(void);
 
 #endif

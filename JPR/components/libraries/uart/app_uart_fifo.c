@@ -249,8 +249,6 @@ uint32_t app_uart_put(uint8_t byte)
             }
         }
     }
-//		nrf_gpio_pin_set(UART_OUT_IRQ);
-//		 nrf_gpio_pin_clear(UART_OUT_IRQ);
     return err_code;
 }
 

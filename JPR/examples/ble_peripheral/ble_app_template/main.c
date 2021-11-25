@@ -50,68 +50,68 @@
  * It can easily be used as a starting point for creating a new application, the comments identified
  * with 'YOUR_JOB' indicates where and how you can customize.
  */
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "nordic_common.h"
-#include "nrf.h"
+#include "app.h"
+#include "app_uart.h"
+#include "app_timer.h"
 #include "app_error.h"
+#include "ble_dfu.h"
+#include "ble_conn_state.h"
 #include "ble.h"
 #include "ble_hci.h"
 #include "ble_srv_common.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
+#include "ble_nus.h"
+#include "ble_hids.h"
+#include "ble_gap.h"
+#include "ble_conn_state.h"
+#include "nrf.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
-#include "app_timer.h"
-#include "fds.h"
-#include "peer_manager.h"
-#include "peer_manager_handler.h"
-#include "bsp_btn_ble.h"
-#include "sensorsim.h"
-#include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
-#include "ble_nus.h"
-#include "ble_gap.h"
-#include "ble_hids.h"
-
-#include "app_uart.h"
-
+#include "nrf_drv_gpiote.h"
+#include "nrf_drv_rng.h"
+#include "nrf_drv_wdt.h"
+#include "nrf_delay.h"
+#include "nrf_power.h"
+#include "nrf_bootloader_info.h"
+#include "nrf_dfu_ble_svci_bond_sharing.h"
+#include "nrf_svci_async_function.h"
+#include "nrf_svci_async_handler.h"
 #if defined (UART_PRESENT)
 #include "nrf_uart.h"
 #endif
 #if defined (UARTE_PRESENT)
 #include "nrf_uarte.h"
 #endif
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "fds.h"
+#include "peer_manager.h"
+#include "peer_manager_handler.h"
+#include "bsp_btn_ble.h"
+#include "sensorsim.h"
 #include "test.h"
-#include "app.h"
 #include "feng_fstorage.h"
 #include "feng_gpiote.h"
-#include "feng_twi.h"	
-#include "nrf_delay.h"
 #include "feng_twi.h"
-#include "nrf_drv_gpiote.h"
-#include "nrf_drv_rng.h"
-#include "nrf_drv_wdt.h"
 
- 
 //=======================================================
 #define DEVICE_NAME                   	"R Senior Watch01"	//"JPR_Watch_TEST" "Nordic_Template"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
-
-#define APP_ADV_INTERVAL                500                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
-#define APP_ADV_DURATION                0 //18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_INTERVAL              	4800 //3 sec                            /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_DURATION                0 //18000         						/**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -154,17 +154,37 @@
 #define MAX_BUFFER_ENTRIES                  5   
 #define INPUT_REPORT_KEYS_MAX_LEN           8   
 
-#define PACKET_HEAD	0xAB
-#define PACKET_END	0x88
+#define NRF52810_IRQ	16
+#define NRF9160_IRQ		18
 
-static bool tp_trige_flag = false;
+bool uartflag = false;
+bool connectflag = false;
+bool disconnectflag =false;
+bool senddataflag = false;
+bool uart_wake_flag = true;
+
+static void uart_init(void);
+
+uint32_t DFU_timer_init(void);
+uint32_t UART_timer_init(void);
+
+void irqio_init(void);
+void nrf52810_outio_set(void);
+void nrf52810_outio_reset(void); 
+void nrf52810_outio_irq(void);
+void senddatato_9160(void);
+void inio_irq_init(void);
+void in_pin_handler(nrf_drv_gpiote_pin_t pin,nrf_gpiote_polarity_t action);
+
+uint8_t IRQ_FLAG =0;
+void Read_Touch_Data_Interuputer_Processing(void);
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);   
-BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT); /**< Advertising module instance. */
+BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT); 								/**< Advertising module instance. */
 
-BLE_HIDS_DEF(m_hids,                                                /**< Structure used to identify the HID service. */
+BLE_HIDS_DEF(m_hids,                                                			/**< Structure used to identify the HID service. */
              NRF_SDH_BLE_TOTAL_LINK_COUNT,
              INPUT_REPORT_KEYS_MAX_LEN,
              OUTPUT_REPORT_MAX_LEN,
@@ -172,11 +192,10 @@ BLE_HIDS_DEF(m_hids,                                                /**< Structu
 
 static bool m_in_boot_mode = false; 
 
-
 nrf_drv_wdt_channel_id m_channel_id;
-
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
-static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;          /**< Maximum length of data (in bytes) that can be transmitted to the peer by the Nordic UART service module. */
+
+static uint16_t m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;        	/**< Maximum length of data (in bytes) that can be transmitted to the peer by the Nordic UART service module. */
 
 //YOUR_JOB: Use UUIDs for service(s) used in your application.
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
@@ -205,21 +224,20 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
-
-
 /**@brief Function for the Timer initialization.
  *
  * @details Initializes the timer module. This creates and starts application timers.
  */
 static void timers_init(void)
 {
-    // Initialize timer module.
-    ret_code_t err_code = app_timer_init();
-    APP_ERROR_CHECK(err_code);
-		system_time_init();
+	//Initialize timer module.
+	ret_code_t err_code = app_timer_init();
+	APP_ERROR_CHECK(err_code);
+	system_time_init();
 
-    // Create timers.
- 
+	DFU_timer_init();
+	UART_timer_init();
+	//Create timers.
 }
 
 
@@ -316,68 +334,118 @@ static void enter_dfu_mode(int8_t CMD)
 //白名单响应
 uint32_t whitelist_response(char pbuff[], uint16_t cmd_id)
 {
-	uint8_t buff[10];
-	uint16_t sendlength=0;
-	static	uint16_t error;
-
+	uint8_t buff[32]={0};
+	uint16_t i,len=0;
+	uint16_t error;
+	
 	memset(buff,0,sizeof(buff));
 	memcpy(buff,pbuff,strlen(pbuff));
 	
 	if(cmd_id == 0xFF59)  
 	{  
-		buff[0]=PACKET_HEAD ;
-		buff[1]=0x00 ;
-		buff[2]=0x05 ;
+		//packet head
+		buff[len++] = 0xAB;
+		//data_len
+		buff[len++] = 0x00;
+		buff[len++] = 0x06;
+		//data ID
+		buff[len++] = 0xFF;
+		buff[len++] = 0x59;
+		//status
+		buff[len++] = 0x80;
+		//control
+		buff[len++] = 0x00;
+		//crc
+		buff[len++] = 0x00;
+		//packet end
+		buff[len++] = 0x88;
 		
-		buff[3]=0xFF ;
-		buff[4]=0x59 ;
-		
-		buff[5]=0x80 ;
-		buff[6]=0x00 ;
-		for(uint8_t i=0;i<7;i++)
-			buff[7]=buff[7]+buff[i] ;//crc
-		
-		buff[8]=PACKET_END ;
-		sendlength = 9 ;
-		error = ble_nus_data_send(&m_nus, buff, &sendlength, m_conn_handle);
-		NRF_LOG_INFO("error:%x",error);
+		for(i=0;i<(len-2);i++)
+			buff[len-2] += buff[i];
+
+		error = ble_nus_data_send(&m_nus, buff, &len, m_conn_handle);
+		NRF_LOG_INFO("error:%x \r\n",error);
 	}
 }
 
 //应答
 void ack_find(bool is_find_flag)
 {	
-	uint8_t buff[10];
-	uint16_t sendlength=0;
-	static uint16_t error;
-	
-	memset(buff,0,sizeof(buff));
-	
-	buff[0]=PACKET_HEAD;
-	buff[1]=0x00;
-	buff[2]=0x08;
-	
-	buff[3]=0xFF;
-	buff[4]=0x58;
-	
-	buff[5]=0x80;
-	buff[6]=0x00;
-	
-	buff[7]=is_find_flag ;//
-	
-	for(uint8_t i=0;i<7;i++)
-		buff[8]=buff[8]+buff[i] ;//crc
-	  
-	buff[9]=PACKET_END;
-	sendlength = 10;
-	error = ble_nus_data_send(&m_nus, buff, &sendlength, m_conn_handle);
-	NRF_LOG_INFO("error:%x",error);
+	uint8_t buff[32]={0};
+	uint16_t i,len=0;
+	uint16_t error;
+
+	//packet head
+	buff[len++] = 0xAB;
+	//data_len
+	buff[len++] = 0x00;
+	buff[len++] = 0x08;
+	//data ID
+	buff[len++] = 0xFF;
+	buff[len++] = 0x58;
+	//status
+	buff[len++] = 0x80;
+	//control
+	buff[len++] = 0x00;
+	//flag
+	buff[len++] = is_find_flag;
+	//crc
+	buff[len++] = 0x00;
+	//packet end
+	buff[len++] = 0x88;
+		
+	for(i=0;i<(len-2);i++)
+		buff[len-2] += buff[i];
+		
+	error = ble_nus_data_send(&m_nus, buff, &len, m_conn_handle);
+	NRF_LOG_INFO("error:%x \r\n",error);
 	if(is_find_flag == false)
 	{
-		connect_flag = true;	
-		NRF_LOG_INFO(" XXXXXX not found");
+		connect_flag  = true;	
+		NRF_LOG_INFO(" XXXXXX not found \r\n");
 	}			
 }
+
+
+APP_TIMER_DEF(DFU_TIME_id);
+void DFU_timer_handler(void * p_context)
+{
+	UNUSED_PARAMETER(p_context);
+	enter_dfu_mode(0x01);
+}
+
+uint32_t DFU_timer_init(void)
+{
+	uint32_t err_code;
+	
+	err_code = app_timer_create(&DFU_TIME_id,APP_TIMER_MODE_SINGLE_SHOT,DFU_timer_handler);
+	APP_ERROR_CHECK(err_code); 
+ 	return err_code;
+}
+
+
+APP_TIMER_DEF(UART_TIME_id);
+void UART_timer_handler(void * p_context)
+{
+	uint32_t err_code;
+	UNUSED_PARAMETER(p_context);
+	
+	uart_wake_flag = false;
+	nrf_uart_task_trigger(NRF_UART0, NRF_UART_TASK_STOPRX);
+	nrf_uart_event_clear(NRF_UART0, NRF_UART_EVENT_RXDRDY);
+	err_code = app_uart_close();
+	APP_ERROR_CHECK(err_code);
+}
+
+uint32_t UART_timer_init(void)
+{
+	uint32_t err_code;
+	
+	err_code = app_timer_create(&UART_TIME_id,APP_TIMER_MODE_SINGLE_SHOT,UART_timer_handler);
+	APP_ERROR_CHECK(err_code); 
+	return err_code;
+}
+
 
 /**@brief Function for handling the YYY Service events.
  * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
@@ -389,131 +457,32 @@ void ack_find(bool is_find_flag)
  * @param[in]   p_evt          Event received from the YY Service.
  *
  */
-static uint8_t temp[40]={0};
-static uint8_t buff[40]={0};
+static uint8_t temp[40];
+static uint8_t buff[40];
 uint8_t actual_length=0;
 uint16_t command_id=0;
 uint16_t data_length=2;
 uint32_t error;
 
+static uint32_t err_code;
+static uint16_t packet_len=0;
+static uint16_t data_len=0;				
+static uint8_t crc=0;
+
 static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
-	if(p_evt->type == BLE_NUS_EVT_RX_DATA)
+	if(p_evt->type == BLE_NUS_EVT_RX_DATA)   //RX receive event
 	{  
-		static uint32_t err_code;
-		static uint16_t packet_len=0;
-		static uint16_t data_len=0;				
-		static uint8_t crc=0;
-
 		NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
-
 		packet_len = p_evt->params.rx_data.length;
 		memset(buff,0, packet_len);	
 		memcpy(buff,p_evt->params.rx_data.p_data,packet_len);
 
-		if(memcmp(buff, g_aes_out, RANDOM_BUFF_SIZE) == 0)//check rand num
-		{
-			write_flag = true;
-			NRF_LOG_INFO("check rand num success!");
-		}	
-		else if((buff[0] == PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] != PACKET_END))
-		{
-			memcpy(temp, buff, packet_len);
-		}
-		else if((buff[0] != PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] == PACKET_END))
-		{
-			memcpy(temp+20, buff, packet_len);
-			actual_length = packet_len+20;
-			memset(buff, 0, sizeof(buff));
-			memcpy(buff, temp+20, actual_length);
+		NRF_LOG_INFO("packet_len:%d\r\n",packet_len);
 
-			NRF_LOG_INFO("actual_length:%d",actual_length);
-			for(uint8_t i=0;i<actual_length;i++)
-			{				
-				NRF_LOG_INFO("buff[%d]:%x", i, buff[i]);
-			}
-		}
-		else if((buff[0] == PACKET_HEAD)&&(buff[p_evt->params.rx_data.length-1] == PACKET_END))
-		{
-			NRF_LOG_INFO("packet_len:%d", p_evt->params.rx_data.length);
-			actual_length = p_evt->params.rx_data.length;
-			for(uint8_t i=0;i<actual_length;i++)
-			{				
-				NRF_LOG_INFO("buff[%d]:%x", i, buff[i]);
-			}
-		}
-		else
-		{
-			NRF_LOG_INFO("data error, disconnect");
-			disconnect_app();//验证随机数,APP加密后不相符,断开连接
-		} 
-
-		if((buff[0] == PACKET_HEAD)&&(buff[actual_length-1] == PACKET_END))
-		{
-			data_len = ((buff[1]<<8)|buff[2]);
-			command_id = (buff[3]<<8|buff[4]);
-			crc=0;
-
-			for(int8_t i=0;i<(packet_len-2);i++)
-			{
-				crc = crc + buff[i];
-			}
-
-			if(crc == buff[actual_length-2])
-			{
-				if(command_id == 0xFF30)//upgrade command
-				{
-					enter_dfu_mode(0x01);
-				}		
-				if(command_id == 0xFF58)//find,APP发送手机的ID给BLE手表
-				{
-					memset(test_buff,0,sizeof(test_buff));
-					memcpy(test_buff,buff+7,data_len-6);
-					find_whilt_flag = true;				
-					judg_app_flag = true; 							
-					guard_time_manger(false);								
-					NRF_LOG_INFO(" Rec data comm:%4x,data_len:%d",command_id,data_len);
-					NRF_LOG_INFO(" ++++++ 0xFF58 0xFF58 0xFF58");
-				}	
-				//0x ab 00 07 ff 21 80 00 01 53 88
-				if(command_id == 0xFF21)//苹果手机连接后，发送过来的,苹果先发这个，后发0xff58
-				{  	
-					ble_gap_sec_params_t params;
-
-					params.bond = 0;
-					params.mitm = 1;
-
-					sd_ble_gap_authenticate(m_conn_handle, &params);				
-
-					NRF_LOG_INFO(" ++++++ 0xFF21 0xFF21 0xFF21");	 
-				}					
-
-				//shut down uart							
-				if((command_id != 0xFF30)&&(command_id != 0xFF58)&&(command_id != 0xFF21)&&(judg_app_flag == true))
-				{
-					for(uint32_t i = 0; i < actual_length; i++)
-					{
-						do
-						{										
-							err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);//to 9160
-							if((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
-							{
-								NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x.", err_code);
-								APP_ERROR_CHECK(err_code);
-							}
-						}while(err_code == NRF_ERROR_BUSY);
-					}
-					NRF_LOG_INFO("uart send data complete!");
-				}
-
-				crc = 0; 
-				memset(buff,0,sizeof(buff));
-			}
-		}
-	}	
+		senddataflag = true;
+	}
 }
-
-///=============================================================
 
 /**@brief Function for handling Service errors.
  *
@@ -526,7 +495,6 @@ static void service_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
-
 
 /**@brief Function for handling HID events.
  *
@@ -690,6 +658,147 @@ static void hids_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+//dfu 9
+//关机准备处理程序。在关闭过程中，将以1秒的间隔调用此函数，直到函数返回true。当函数返回true时，表示应用程序已准备好复位为DFU模式
+static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
+{
+    switch (event)
+    {
+        case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+			// NRF_LOG_INFO("Power management wants to reset to DFU mode.");
+			// YOUR_JOB: Get ready to reset into DFU mode
+			//
+			// If you aren't finished with any ongoing tasks, return "false" to
+			// signal to the system that reset is impossible at this stage.
+			//
+			// Here is an example using a variable to delay resetting the device.
+			//
+			// if (!m_ready_for_reset)
+			// {
+			//      return false;
+			// }
+			// else
+			// {
+			//
+			//    // Device ready to enter
+			//    uint32_t err_code;
+			//    err_code = sd_softdevice_disable();
+			//    APP_ERROR_CHECK(err_code);
+			//    err_code = app_timer_stop_all();
+			//    APP_ERROR_CHECK(err_code);
+			// }
+            break;
+
+        default:
+            // YOUR_JOB: Implement any of the other events available from the power management module:
+            //      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
+            //      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
+            //      -NRF_PWR_MGMT_EVT_PREPARE_RESET
+            return true;
+    }
+
+	//NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
+    return true;
+}
+
+//dfu 8
+//注册优先级为0的应用程序关闭处理程序
+NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
+
+//dfu 7
+//SoftDevice状态监视者
+static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void * p_context)
+{
+    if(state == NRF_SDH_EVT_STATE_DISABLED)
+    {
+        //表明Softdevice在复位之前已经禁用，告之bootloader启动时应跳过CRC
+        nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
+        //进入system off.
+        nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+    }
+}
+
+//dfu 6
+//注册SoftDevice状态监视者，用于SoftDevice状态改变或者即将改变时接收SoftDevice事件
+NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
+{
+    .handler = buttonless_dfu_sdh_state_observer,
+};
+
+//dfu 5
+//断开当前连接，设备准备进入bootloader之前，需要先断开连接
+static void disconnect(uint16_t conn_handle, void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    //断开当前连接
+    ret_code_t err_code = sd_ble_gap_disconnect(conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    if (err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_WARNING("Failed to disconnect connection. Connection handle: %d Error: %d", conn_handle, err_code);
+    }
+    else
+    {
+        NRF_LOG_DEBUG("Disconnected connection handle %d", conn_handle);
+    }
+}
+
+//dfu 4
+//获取广播模式、间隔和超时时间
+static void advertising_config_get(ble_adv_modes_config_t * p_config)
+{
+    memset(p_config, 0, sizeof(ble_adv_modes_config_t));
+
+    p_config->ble_adv_fast_enabled  = true;
+    p_config->ble_adv_fast_interval = APP_ADV_INTERVAL;
+    p_config->ble_adv_fast_timeout  = APP_ADV_DURATION;
+}
+
+//dfu 3
+//DFU事件处理函数。如果需要在DFU事件中执行操作，可以在相应的事件里面加入处理代码
+static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
+{
+    switch (event)
+    {
+        //该事件指示设备正在准备进入bootloader
+		case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
+        {
+            NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
+
+            //防止设备在断开连接时广播
+            ble_adv_modes_config_t config;
+            advertising_config_get(&config);
+			//连接断开后设备不自动进行广播
+            config.ble_adv_on_disconnect_disabled = true;
+			//修改广播配置
+            ble_advertising_modes_config_set(&m_advertising, &config);
+            //断开当前已经连接的所有其他绑定设备。在设备固件更新成功（或中止）后，需要在启动时接收服务更改指示
+            uint32_t conn_count = ble_conn_state_for_each_connected(disconnect, NULL);
+            NRF_LOG_INFO("Disconnected %d links.", conn_count);
+            break;
+        }
+        //该事件指示函数返回后设备即进入bootloader
+        case BLE_DFU_EVT_BOOTLOADER_ENTER:
+            //如果应用程序有数据需要保存到Flash，通过app_shutdown_handler返回flase以延迟复位，从而保证数据正确写入到Flash
+            NRF_LOG_INFO("Device will enter bootloader mode.");
+            break;
+        //该事件指示进入bootloader失败
+        case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
+            //进入bootloader失败，应用程序需要采取纠正措施来处理问题
+			NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
+            break;
+        //该事件指示发送响应失败
+        case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
+            NRF_LOG_ERROR("Request to send a response to client failed.");
+            //发送响应失败，应用程序需要采取纠正措施来处理问题
+            APP_ERROR_CHECK(false);
+            break;
+
+        default:
+            NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
+            break;
+    }
+}
+
 /**@brief Function for initializing services that will be used by the application.
  */
 static void services_init(void)
@@ -697,14 +806,23 @@ static void services_init(void)
     ret_code_t         err_code;
     ble_nus_init_t     nus_init;
     nrf_ble_qwr_init_t qwr_init = {0};
+		
+	//dfu 2		
+	//定义DFU服务初始化结构体变量
+	ble_dfu_buttonless_init_t dfus_init = {0};
+	//DFU服务事件句柄
+	dfus_init.evt_handler = ble_dfu_evt_handler;
+    //初始化DFU服务
+    err_code = ble_dfu_buttonless_init(&dfus_init);
+    APP_ERROR_CHECK(err_code);
 
-    // Initialize Queued Write Module.
+    //Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
 
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
 
-     // Initialize NUS.
+    //Initialize NUS.
     memset(&nus_init, 0, sizeof(nus_init));
 
     nus_init.data_handler = nus_data_handler;
@@ -712,9 +830,8 @@ static void services_init(void)
     err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
 		
-		hids_init();
+	hids_init();
 }
-
 
 /**@brief Function for handling the Connection Parameters Module.
  *
@@ -732,7 +849,6 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
-    	NRF_LOG_INFO("[%s] sd_ble_gap_disconnect", __func__);
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
     }
@@ -807,27 +923,28 @@ static void sleep_mode_enter(void)
  *
  * @param[in] ble_adv_evt  Advertising event.
  */
-static void on_adv_evt(ble_adv_evt_t ble_adv_evt) //无效广播后进入到睡眠模式
+static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
     ret_code_t err_code;
 
-    switch(ble_adv_evt)
+    switch (ble_adv_evt)
     {
-    case BLE_ADV_EVT_FAST:
-        NRF_LOG_INFO("Fast advertising.");
-        err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-        APP_ERROR_CHECK(err_code);
-        break;
+        case BLE_ADV_EVT_FAST:
+            NRF_LOG_INFO("Fast advertising.");
+            err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+            APP_ERROR_CHECK(err_code);
+            break;
 
-    case BLE_ADV_EVT_IDLE:
-        sleep_mode_enter();  // 进入睡眠模式
-        break;
+        case BLE_ADV_EVT_IDLE:
+			//sleep_mode_enter();     //无效广播后进入睡眠模式。
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
+//======================================================
 ble_gap_sec_params_t g_pair_params;
 
 void init_sec(void)
@@ -846,7 +963,6 @@ void init_sec(void)
 	g_pair_params.kdist_peer.enc = 1 ;
 	g_pair_params.kdist_peer.id = 0 ;
 	g_pair_params.kdist_peer.sign = 0 ;
-	
 }
 
 ble_gap_enc_key_t  my_enc_key;
@@ -872,15 +988,15 @@ void init_keyset(void)
  */
 static void	app_connect(void)
 { 
-	uint8_t Push_conne[9]={0};  
- 	uint32_t i,len=0;
-	
-	//head
-	Push_conne[len++] = PACKET_HEAD;
-	//len
+	uint8_t Push_conne[32]={0};
+	uint16_t i,len=0;
+
+	//packet head
+	Push_conne[len++] = 0xAB;
+	//data len
 	Push_conne[len++] = 0x00;
 	Push_conne[len++] = 0x06;
-	//ID
+	//data id
 	Push_conne[len++] = 0xFF;
 	Push_conne[len++] = 0xB0;
 	//status
@@ -889,27 +1005,30 @@ static void	app_connect(void)
 	Push_conne[len++] = 0x01;
 	//crc
 	Push_conne[len++] = 0x00;
-	//end
-	Push_conne[len++] = PACKET_END;
-
+	//packet end
+	Push_conne[len++] = 0x88;
+	
 	for(i=0;i<(len-2);i++)
 		Push_conne[len-2] += Push_conne[i];
-	
- 	for(i=0;i<len;i++)
-		error = app_uart_put(Push_conne[i]);		
+
+	for(i=0;i<len;i++)
+	{
+		app_uart_put(Push_conne[i]);		
+		NRF_LOG_INFO("connected %d:%4x\r\n",i,Push_conne[i]);
+	}
 }
 
 static void	app_disconnect(void)
 {
-	uint8_t Push_conne[9] = {0}; 
-	uint32_t i,len=0;
+	uint8_t Push_conne[9]={0}; 
+	uint16_t i,len=0;
 
-	//head
-	Push_conne[len++] = PACKET_HEAD;
-	//len
+	//packet head
+	Push_conne[len++] = 0xAB;
+	//data len
 	Push_conne[len++] = 0x00;
 	Push_conne[len++] = 0x06;
-	//ID
+	//data id
 	Push_conne[len++] = 0xFF;
 	Push_conne[len++] = 0xB0;
 	//status
@@ -918,14 +1037,17 @@ static void	app_disconnect(void)
 	Push_conne[len++] = 0x00;
 	//crc
 	Push_conne[len++] = 0x00;
-	//end
-	Push_conne[len++] = PACKET_END;
+	//packet end
+	Push_conne[len++] = 0x88;
 
 	for(i=0;i<(len-2);i++)
 		Push_conne[len-2] += Push_conne[i];
 
 	for(i=0;i<len;i++)
+	{
 		app_uart_put(Push_conne[i]);		
+		NRF_LOG_INFO("disconnected %d:%4x\r\n",i,Push_conne[i]);
+	}
 }
 
 /**@brief Function for handling BLE events.
@@ -938,16 +1060,12 @@ uint8_t step_counter;
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code = NRF_SUCCESS;
-	
-	//NRF_LOG_INFO("[%s] evt_id:%d.", __func__, p_ble_evt->header.evt_id);
+
     switch(p_ble_evt->header.evt_id)
 	{
 	case BLE_GAP_EVT_CONNECTED:
-		NRF_LOG_INFO("[%s] Connected.", __func__);
-		guard_time_manger(true) ;
-		app_connect();
-		judg_app_flag = false;
-
+		NRF_LOG_INFO("Connected.");
+		connectflag = true;
 	#if PM_BOND_SWITCH
 		init_keyset();
 	#endif
@@ -972,10 +1090,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			NRF_LOG_INFO("[%s] Disconnected: other reason(%02X)", __func__, p_ble_evt->evt.gap_evt.params.disconnected.reason);
 			break;
 		}
-		
-		app_disconnect();
-		GUARD_TIME_SECONDS = 0;
-		judg_app_flag = false ;
+		NRF_LOG_INFO("Disconnected.");
+		disconnectflag = true;
 		break;
 
 	case BLE_GAP_EVT_CONN_PARAM_UPDATE:
@@ -1173,8 +1289,6 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 		{		
 			//this case is optional. comment the following lines if not needed
 			pm_conn_sec_config_t cfg;
-
-			NRF_LOG_INFO("[%s] PM_EVT_CONN_SEC_CONFIG_REQ", __func__);
 			cfg.allow_repairing = true;   //true to permit a second paring with the same host when the bonding info is removed
 			pm_conn_sec_config_reply(p_evt->conn_handle, &cfg);
 		}
@@ -1278,8 +1392,7 @@ static void peer_manager_init(void)
     sec_param.kdist_own.id   = 1;
     sec_param.kdist_peer.enc = 1;
     sec_param.kdist_peer.id  = 1;
-		
- 
+
     err_code = pm_sec_params_set(&sec_param);
     APP_ERROR_CHECK(err_code);
 
@@ -1294,11 +1407,12 @@ static void delete_bonds(void)
 {
     ret_code_t err_code;
 
-    NRF_LOG_INFO("[%s]", __func__);
+    NRF_LOG_INFO("Erase bonds!");
 
     err_code = pm_peers_delete();
     APP_ERROR_CHECK(err_code);
 }
+
 
 /**@brief Function for handling events from the BSP module.
  *
@@ -1312,7 +1426,7 @@ static void bsp_event_handler(bsp_event_t event)
 	{
 	case BSP_EVENT_SLEEP:
 		NRF_LOG_INFO("[%s] BSP_EVENT_SLEEP", __func__);
-		sleep_mode_enter();
+		//sleep_mode_enter(); //按钮触发进入睡眠模式。
 		break;
 
 	case BSP_EVENT_DISCONNECT:
@@ -1348,14 +1462,11 @@ static void bsp_event_handler(bsp_event_t event)
  */
 static void advertising_init(void)
 {
-	ret_code_t err_code;
-	ble_advertising_init_t init;
+    ret_code_t err_code;
+    ble_advertising_init_t init={0};
 	ble_advdata_manuf_data_t manuf_data;
 	ble_gap_addr_t device_addr;
-	uint8_t m_adv_data[6];
-
-	memset(&init, 0, sizeof(init));
-	memset(&m_adv_data, 0, sizeof(m_adv_data));
+	uint8_t m_adv_data[6]={0};
 
 	err_code = sd_ble_gap_addr_get(&device_addr); 
 	device_address[0]= device_addr.addr[5];
@@ -1366,19 +1477,18 @@ static void advertising_init(void)
 	device_address[5]= device_addr.addr[0];
 	memcpy(m_adv_data,device_address,DEVICE_ADDRESS_LEN);
 
-	manuf_data.data.p_data = m_adv_data;				//添加到 广播包中的数据
-	manuf_data.data.size = sizeof(m_adv_data);  		//添加到 广播包中的数据长度
-	manuf_data.company_identifier = 0x0001;				//2个字节，广播包从这个地方开始
-
+	manuf_data.data.p_data = m_adv_data;			//添加到广播包中的数据
+	manuf_data.data.size = sizeof(m_adv_data);  	//添加到广播包中的数据长度
+	manuf_data.company_identifier = 0x0001;			//2个字节，广播包从这个地方开始
+	
 	init.advdata.name_type               = BLE_ADVDATA_FULL_NAME; //BLE_ADVDATA_FULL_NAME BLE_ADVDATA_SHORT_NAME
 	init.advdata.include_appearance      = false;//true
 	init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-
 	init.advdata.p_manuf_specific_data= &manuf_data ; //add	    
 
 	//init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-	//init.advdata.uuids_complete.p_uuids  = m_adv_uuids;						//不注释掉，广播名字不能显示完整
+	//init.advdata.uuids_complete.p_uuids  = m_adv_uuids;	//不注释掉，广播名字不能显示完整
 
 	init.config.ble_adv_fast_enabled  = true;
 	init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
@@ -1399,16 +1509,16 @@ static void advertising_init(void)
  */
 static void buttons_leds_init(bool * p_erase_bonds)
 {
-	ret_code_t err_code;
-	bsp_event_t startup_event;
+    ret_code_t err_code;
+    bsp_event_t startup_event;
 
-	err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
-	APP_ERROR_CHECK(err_code);
+    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
+    APP_ERROR_CHECK(err_code);
 
-	err_code = bsp_btn_ble_init(NULL, &startup_event);
-	APP_ERROR_CHECK(err_code);
+    err_code = bsp_btn_ble_init(NULL, &startup_event);
+    APP_ERROR_CHECK(err_code);
 
-	*p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
+    *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
 }
 
 
@@ -1452,8 +1562,6 @@ m_advertising
 										 
 void advertising_stop(ble_advertising_t * const p_advertising)
 {
-	NRF_LOG_INFO("[%s]", __func__);
-
 	sd_ble_gap_adv_stop(p_advertising->adv_handle);
 	ble_work_status = 0x00;
 }
@@ -1462,19 +1570,18 @@ void advertising_stop(ble_advertising_t * const p_advertising)
  */
 static void advertising_start(bool erase_bonds)
 {
-	NRF_LOG_INFO("[%s] erase_bonds:%d", __func__, erase_bonds);
-	if(erase_bonds == true)
-	{
-		advertising_stop(&m_advertising);
-		delete_bonds();
-		//Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED event
-	}
-	else
-	{
-		ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+    if(erase_bonds == true)
+    {
+    	advertising_stop(&m_advertising);
+		//delete_bonds();
+        //Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED event
+    }
+    else
+    {
+        ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
 		ble_work_status = 0x02;
-		APP_ERROR_CHECK(err_code);
-	}
+        APP_ERROR_CHECK(err_code);
+    }
 }
 
 
@@ -1483,7 +1590,7 @@ static void advertising_start(bool erase_bonds)
  * @details This function will receive a single character from the app_uart module and append it to
  *          a string. The string will be be sent over BLE when the last character received was a
  *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
- *			BLE get data from uart and send them to ble. like this:AB0007FF468000017888
+ BLE 从串口获取数据，然后通过ble 发送出去AB0007FF468000017888
 */
 /**@snippet [Handling the data received over UART] */
 void uart_event_handle(app_uart_evt_t * p_event)
@@ -1494,23 +1601,24 @@ void uart_event_handle(app_uart_evt_t * p_event)
 	uint16_t data_len=0; 
 	uint8_t	rx_crc=0;
 	uint16_t rx_cmd_id=0;
-
+	uint32_t err_code;
+	
     switch(p_event->evt_type)
 	{
 	case APP_UART_DATA_READY:
 		while(app_uart_get(&cr) == NRF_SUCCESS)
 		{
 			data_array[rec_len++] = cr;
-			//NRF_LOG_INFO("[%s] rec_len:%d, cr:%x", __func__, rec_len, cr);
+			NRF_LOG_INFO("[%s] rec_len:%d, cr:%x", __func__, rec_len, cr);
 			
-			if(data_array[0] != PACKET_HEAD)
+			if(data_array[0] != 0xab)
 			{
 				NRF_LOG_INFO("[%s] receive data is valid!", __func__);
 				rec_len = 0;
 			}
 		}
 
-		if((data_array[0] == PACKET_HEAD)&&(data_array[rec_len-1] == PACKET_END))
+		if((data_array[0] == 0xab)&&(data_array[rec_len-1] == 0x88))
 		{
 			data_len = ((data_array[1]<<8)|data_array[2]);
 			rx_cmd_id = (data_array[3]<<8|data_array[4]);
@@ -1560,21 +1668,21 @@ void uart_event_handle(app_uart_evt_t * p_event)
 		}
 		break;
 
-	case APP_UART_DATA: 
+    case APP_UART_DATA: 
 		NRF_LOG_INFO(" ====== APP_UART_DATA ");		
-		break;
+        break;
 
-	case APP_UART_TX_EMPTY:
+    case APP_UART_TX_EMPTY:
 		NRF_LOG_INFO(" ====== APP_UART_TX_EMPTY ");
-		break;
+        break;
 
-	case APP_UART_FIFO_ERROR:
-		APP_ERROR_HANDLER(p_event->data.error_code);
-		break;
+    case APP_UART_FIFO_ERROR:
+        APP_ERROR_HANDLER(p_event->data.error_code);
+        break;
 
-	default:
-		break;
-	}	
+    default:
+        break;
+    }
 }
 
 
@@ -1612,8 +1720,37 @@ static void uart_init(void)
 //static void tp_pin_handler(void)
 static void tp_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 { 
-	//NRF_LOG_INFO("tp_pin_handler");
-	tp_trige_flag = true;
+	(void)pin;
+	(void)action;
+	IRQ_FLAG = 1;
+}
+
+void tp_init(void)
+{
+	uint32_t err_code;
+
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+	in_config.pull = NRF_GPIO_PIN_PULLUP;
+	err_code = nrf_drv_gpiote_in_init(TP_EINT_PIN, &in_config, tp_pin_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(TP_EINT_PIN, true);
+	
+	nrf_gpio_cfg_output(TP_RSET_PIN);
+	nrf_gpio_pin_clear(TP_RSET_PIN);
+	nrf_delay_ms(10);
+	nrf_gpio_pin_set(TP_RSET_PIN);
+	nrf_delay_ms(50);	
+
+	read_tp_id();
+}
+
+void Read_Touch_Data_Interuputer_Processing(void)
+{
+	if(IRQ_FLAG)
+	{
+		tp_interrupt_handler();
+		IRQ_FLAG=0;
+	}
 }
 
 void wdt_event_handler(void)
@@ -1627,15 +1764,21 @@ int main(void)
 {
 	bool erase_bonds;
 	uint32_t err_code;
+	
+	//dfu 10
+	//使能任一中断之前，将异步SVCI接口初始化为引导加载程序
+	err_code = ble_dfu_buttonless_async_svci_init();
+	APP_ERROR_CHECK(err_code);
 
 	log_init();
 	uart_init();
+	twi_init();//i2c
 	fs_init();
-	twi_init();
+	irqio_init();
 
 	bath_read();
 	timers_init();
-	buttons_leds_init(&erase_bonds);
+	//buttons_leds_init(&erase_bonds);
 	power_management_init();
 	ble_stack_init();
 	gap_params_init();
@@ -1643,10 +1786,8 @@ int main(void)
 	advertising_init();
 	services_init();
 	conn_params_init();
-	peer_manager_init();
+	//peer_manager_init();
 	guard_time_init();
-	nrf_gpio_cfg_output(UART_OUT_IRQ);
-	nrf_gpio_pin_set(UART_OUT_IRQ);
 
 	//Start execution.
 	NRF_LOG_INFO("main started.");
@@ -1665,27 +1806,17 @@ int main(void)
 	nrf_drv_wdt_enable();
 
 	//Touch
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
-	in_config.pull = NRF_GPIO_PIN_PULLUP;
-	err_code = nrf_drv_gpiote_in_init(TP_EINT_PIN, &in_config, tp_pin_handler);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_gpiote_in_event_enable(TP_EINT_PIN, true);
-	
-	nrf_gpio_cfg_output(TP_RSET_PIN);
-	nrf_gpio_pin_clear(TP_RSET_PIN);
-	nrf_delay_ms(10);
-	nrf_gpio_pin_set(TP_RSET_PIN);
-	nrf_delay_ms(50);	
+	tp_init();
 
-	read_tp_id();
+	/****系统初始化完成，NRF52810通过串口向NRF9160发送远成标志数据**********/
+	nrf52810_outio_irq();
+	systemStartFlag = 1;  //系统启动完成标志
+	system_upgrade_info_send();
+	systemStartFlag = 0;	
 
 	while(1)
 	{
-		if(tp_trige_flag)
-		{
-			tp_trige_flag = false;
-			tp_interrupt_handler();
-		}
+		nrf_drv_wdt_channel_feed(m_channel_id);
 
 		if(connect_flag)
 		{  
@@ -1699,15 +1830,23 @@ int main(void)
 			updata_records();
 		}
 
-		if(find_whilt_flag)//1 find 0xFF58
+		if(find_whilt_flag)
 		{
 			find_whilt_flag = false;
 			is_find_flag = add_whilt_list(test_buff);
-			ack_find(is_find_flag); //don't find, send rand num
+			ack_find(is_find_flag); //没有找到发送随机数
 		}
-
+		
+		if(connectflag)
+			senddatato_9160();
+		
+		if(disconnectflag)
+			senddatato_9160();
+		
+		if(senddataflag)
+			senddatato_9160();
+		
 		idle_state_handle();
-		nrf_drv_wdt_channel_feed(m_channel_id);
 	}
 }
 
@@ -1726,5 +1865,171 @@ void send_data_app(uint8_t *pbuff, uint16_t	pdata_len)
 	uint32_t error;
  
 	error = ble_nus_data_send(&m_nus, pbuff, &pdata_len, m_conn_handle);
-	NRF_LOG_INFO("[%s] error:%x", __func__, error);
+	NRF_LOG_INFO(" Ble sned to app error:%x \r\n",error);
 }
+
+/**
+ * @}
+ */
+
+void irqio_init(void)
+{
+	nrf_gpio_cfg_output(NRF52810_IRQ);
+	nrf_gpio_pin_clear(NRF52810_IRQ);
+}	
+
+void nrf52810_outio_set(void)
+{
+	nrf_gpio_pin_set(NRF52810_IRQ);
+}	
+
+void nrf52810_outio_reset(void)
+{
+	nrf_gpio_pin_clear(NRF52810_IRQ);
+}	
+
+void nrf52810_outio_irq(void)
+{
+	nrf_gpio_pin_set(NRF52810_IRQ);
+	nrf_delay_ms(10);
+	nrf_gpio_pin_clear(NRF52810_IRQ);
+}
+
+void senddatato_9160(void)
+{
+	ret_code_t err_code = NRF_SUCCESS;
+	
+	if(connectflag)
+	{
+		connectflag = false;
+
+		nrf52810_outio_irq();
+		guard_time_manger(true);
+		app_connect();
+		judg_app_flag = false;
+	}
+
+	if(disconnectflag)	
+	{
+		disconnectflag = false;
+
+		nrf52810_outio_irq();
+		app_disconnect();
+		GUARD_TIME_SECONDS = 0;
+		judg_app_flag = false;
+	}
+
+	if(senddataflag)
+	{
+		senddataflag = false;
+		if(memcmp(buff,g_aes_out,RANDOM_BUFF_SIZE) == 0) //验证随机数
+		{
+			write_flag = true;
+			NRF_LOG_INFO("  ******************** \r\n");
+			NRF_LOG_INFO("   OK OK OK OK OK  \r\n");
+		}	
+		else if((buff[0] == 0xAB)&&(buff[packet_len-1] != 0x88 ))
+		{
+			memcpy(temp,buff,packet_len);
+		}
+		else if((buff[0] != 0xAB)&&(buff[packet_len-1]==0x88))
+		{
+			memcpy(temp+20,buff,packet_len);
+			actual_length = packet_len+20;
+			memset(buff,0,sizeof(buff));
+			memcpy(buff,temp+20,actual_length);
+
+			NRF_LOG_INFO(" actual_length:%d\r\n",actual_length);
+			for(uint8_t i=0;i<actual_length;i++)
+			{				
+				NRF_LOG_INFO(" buff[%d]:%x\r\n",i,buff[i]);
+			}
+		}
+		else if((buff[0] == 0xAB)&&(buff[packet_len-1]==0x88 ))
+		{
+			NRF_LOG_INFO(" packet_len:%d\r\n",packet_len);
+			actual_length = packet_len;
+			for(uint8_t i=0;i<actual_length;i++)
+			{				
+				NRF_LOG_INFO(" buff[%d]:%x\r\n",i,buff[i]);
+			}
+		}
+		else
+		{
+			disconnect_app(); //随机数验证，APP 加密后的结果不相等，断开
+		} 
+		NRF_LOG_INFO(" ++++++++++++++++++++++++ \r\n");
+
+		if((buff[0] == 0xAB)&&(buff[actual_length-1] == 0x88))
+		{
+			data_len = ((buff[1]<<8)|buff[2]);
+			command_id = (buff[3]<<8|buff[4]);
+			crc=0;
+
+			for(int8_t i=0;i<packet_len-2;i++)
+			{
+				crc = crc + buff[i];
+			}
+			NRF_LOG_INFO(" crc  is ok \r\n");
+
+			if(crc == buff[actual_length-2])//crc
+			{
+				if(command_id == 0xFF30) //升级指令
+				{
+					bootloaderMode=1;
+					system_upgrade_info_send();
+					bootloaderMode=0;
+
+					err_code = app_timer_start(DFU_TIME_id, APP_TIMER_TICKS(10), NULL);
+					APP_ERROR_CHECK(err_code);
+				}		
+				if(command_id == 0xFF58) //find，APP发送手机的ID给BLE手表
+				{
+					memset(test_buff,0,sizeof(test_buff));
+					memcpy(test_buff,buff+7,data_len-6);
+					find_whilt_flag = true;				
+					judg_app_flag = true; 							
+					guard_time_manger(false);								
+					NRF_LOG_INFO(" Rec data comm:%4x,data_len:%d \n",command_id,data_len);
+					NRF_LOG_INFO(" ++++++ 0xFF58 0xFF58 0xFF58 \n");
+				}
+				//0x ab 00 07 ff 21 80 00 01 53 88
+				if(command_id == 0xFF21) //苹果手机连接后，发送过来的,苹果先发这个，后发0xff58
+				{  	
+					ble_gap_sec_params_t params;
+
+					params.bond = 0;
+					params.mitm = 1;
+
+					sd_ble_gap_authenticate(m_conn_handle, &params);				
+
+					NRF_LOG_INFO(" ++++++ 0xFF21 0xFF21 0xFF21 \n");	 
+					NRF_LOG_INFO(" ++++++ 0xFF21 0xFF21 0xFF21 \n");
+				}					
+				if((command_id != 0xFF30)&&(command_id != 0xFF58)&&(command_id != 0xFF21)&&(judg_app_flag == true))
+				{
+					nrf52810_outio_irq();
+					
+					for(uint32_t i = 0; i < actual_length; i++)
+					{
+						do
+						{										
+							err_code = app_uart_put(buff[i]);//to 9160
+							NRF_LOG_INFO(" 1+++err_code:%d \r\n",err_code);
+							if((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
+							{
+								NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
+								APP_ERROR_CHECK(err_code);
+							}
+						}while(err_code == NRF_ERROR_BUSY);
+					}
+					NRF_LOG_INFO("Tx uart over!");
+				}
+
+				//清零准备接收下一条
+				crc = 0; 
+				memset(buff,0,sizeof(buff));
+			}
+		}
+	}
+}	

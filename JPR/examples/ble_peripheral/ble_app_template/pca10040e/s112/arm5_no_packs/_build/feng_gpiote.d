@@ -1,7 +1,7 @@
 .\_build\feng_gpiote.o: ..\..\..\app\feng_gpiote.c
 .\_build\feng_gpiote.o: ..\..\..\app\feng_gpiote.h
-.\_build\feng_gpiote.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\_build\feng_gpiote.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\_build\feng_gpiote.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\_build\feng_gpiote.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 .\_build\feng_gpiote.o: ..\..\..\..\..\..\components\libraries\log\nrf_log.h
 .\_build\feng_gpiote.o: ..\..\..\..\..\..\components\libraries\util\sdk_common.h

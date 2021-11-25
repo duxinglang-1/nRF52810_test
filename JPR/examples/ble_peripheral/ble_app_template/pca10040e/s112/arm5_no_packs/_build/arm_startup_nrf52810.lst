@@ -508,27 +508,28 @@ erter -I..\..\..\..\..\..\integration\nrfx -I..\..\..\..\..\..\integration\nrfx
 \legacy -I..\..\..\..\..\..\modules\nrfx -I..\..\..\..\..\..\modules\nrfx\drive
 rs\include -I..\..\..\..\..\..\modules\nrfx\hal -I..\..\..\..\..\..\modules\nrf
 x\mdk -I..\config -I.\RTE\_nrf52810_xxaa -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\
-CMSIS\Include -IC:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.
-27.0\Device\Include --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERS
-ION SETA 527" --predefine="_RTE_ SETA 1" --predefine="NRF52810_XXAA SETA 1" --p
-redefine="APP_TIMER_V2 SETA 1" --predefine="APP_TIMER_V2_RTC1_ENABLED SETA 1" -
--predefine="BOARD_PCA10040 SETA 1" --predefine="CONFIG_GPIO_AS_PINRESET SETA 1"
- --predefine="DEVELOP_IN_NRF52832 SETA 1" --predefine="FLOAT_ABI_SOFT SETA 1" -
--predefine="NRF52810_XXAA SETA 1" --predefine="NRF52_PAN_74 SETA 1" --predefine
-="NRFX_COREDEP_DELAY_US_LOOP_CYCLES SETA 3" --predefine="NRF_SD_BLE_API_VERSION
- SETA 7" --predefine="S112 SETA 1" --predefine="SOFTDEVICE_PRESENT SETA 1" --pr
-edefine="__HEAP_SIZE SETA 2048" --predefine="__STACK_SIZE SETA 2048" --cpreproc
+CMSIS\Include -IC:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack_No
+rdicLicense\8.27.0\Device\Include --predefine="__MICROLIB SETA 1" --predefine="
+__UVISION_VERSION SETA 523" --predefine="_RTE_ SETA 1" --predefine="NRF52810_XX
+AA SETA 1" --predefine="APP_TIMER_V2 SETA 1" --predefine="APP_TIMER_V2_RTC1_ENA
+BLED SETA 1" --predefine="BOARD_PCA10040 SETA 1" --predefine="CONFIG_GPIO_AS_PI
+NRESET SETA 1" --predefine="DEVELOP_IN_NRF52832 SETA 1" --predefine="FLOAT_ABI_
+SOFT SETA 1" --predefine="NRF52810_XXAA SETA 1" --predefine="NRF52_PAN_74 SETA 
+1" --predefine="NRFX_COREDEP_DELAY_US_LOOP_CYCLES SETA 3" --predefine="NRF_SD_B
+LE_API_VERSION SETA 7" --predefine="S112 SETA 1" --predefine="SOFTDEVICE_PRESEN
+T SETA 1" --predefine="__HEAP_SIZE SETA 2048" --predefine="__STACK_SIZE SETA 20
 
 
 
 ARM Macro Assembler    Page 9 
 
 
-_opts=-DAPP_TIMER_V2,-DAPP_TIMER_V2_RTC1_ENABLED,-DBOARD_PCA10040,-DCONFIG_GPIO
-_AS_PINRESET,-DDEVELOP_IN_NRF52832,-DFLOAT_ABI_SOFT,-DNRF52810_XXAA,-DNRF52_PAN
-_74,-DNRFX_COREDEP_DELAY_US_LOOP_CYCLES=3,-DNRF_SD_BLE_API_VERSION=7,-DS112,-DS
-OFTDEVICE_PRESENT,-D__HEAP_SIZE=2048,-D__STACK_SIZE=2048 --list=.\_build\arm_st
-artup_nrf52810.lst RTE\Device\nRF52810_xxAA\arm_startup_nrf52810.s
+48" --cpreproc_opts=-DAPP_TIMER_V2,-DAPP_TIMER_V2_RTC1_ENABLED,-DBOARD_PCA10040
+,-DCONFIG_GPIO_AS_PINRESET,-DDEVELOP_IN_NRF52832,-DFLOAT_ABI_SOFT,-DNRF52810_XX
+AA,-DNRF52_PAN_74,-DNRFX_COREDEP_DELAY_US_LOOP_CYCLES=3,-DNRF_SD_BLE_API_VERSIO
+N=7,-DS112,-DSOFTDEVICE_PRESENT,-D__HEAP_SIZE=2048,-D__STACK_SIZE=2048 --list=.
+\_build\arm_startup_nrf52810.lst RTE\Device\nRF52810_xxAA\arm_startup_nrf52810.
+s
 
 
 

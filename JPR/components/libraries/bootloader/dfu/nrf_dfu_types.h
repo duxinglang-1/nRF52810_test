@@ -56,6 +56,11 @@
 #include "app_util_platform.h"
 #include "sdk_config.h"
 
+
+#ifndef NRF_DFU_TRANSPORT_BLE
+#define NRF_DFU_TRANSPORT_BLE 1
+#endif
+
 #if defined(NRF_DFU_TRANSPORT_BLE) && NRF_DFU_TRANSPORT_BLE
 #include "ble_gap.h"
 #define SYSTEM_SERVICE_ATT_SIZE 8   /**< Size of the system service attribute length including CRC-16 at the end. */
