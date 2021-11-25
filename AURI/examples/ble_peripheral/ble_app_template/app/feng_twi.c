@@ -45,15 +45,16 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 {
     switch (p_event->type)
     {
-        case NRF_DRV_TWI_EVT_DONE:
-            if (p_event->xfer_desc.type == NRF_DRV_TWI_XFER_RX)
-            {
-                data_handler(m_sample);
-            }
-            m_xfer_done = true;
-            break;
-        default:
-            break;
+    case NRF_DRV_TWI_EVT_DONE:
+        if (p_event->xfer_desc.type == NRF_DRV_TWI_XFER_RX)
+        {
+            data_handler(m_sample);
+        }
+        m_xfer_done = true;
+        break;
+
+    default:
+        break;
     }
 }
 /* ***********************************************************
@@ -61,7 +62,7 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 */
 void twi_init (void)
 {
-static    ret_code_t err_code;
+	static ret_code_t err_code;
 
     const nrf_drv_twi_config_t twi_tp_config = {
        .scl                = TP_SCL_PIN,
@@ -87,17 +88,13 @@ void nrf_twi_tx(uint8_t reg_addr,uint8_t reg_value)
 
 void nrf_twi_rx(uint8_t reg_addr,uint8_t *p_data,uint8_t length)
 {
-	
+	m_xfer_done = false;
 	nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, &reg_addr,sizeof(reg_addr),false);
-  while (m_xfer_done == false);
-	 m_xfer_done = true;
-	
- 	nrf_delay_ms(1);
-	
+  	while(!m_xfer_done);
+
+	m_xfer_done = false;
 	nrf_drv_twi_rx(&m_twi, TP_I2C_ADDRESS, p_data, length);
-  while (m_xfer_done == false);
-	 m_xfer_done = true;
- 	nrf_delay_ms(1);
+  	while(!m_xfer_done);
 }
 
 
@@ -129,32 +126,14 @@ void stop_task(void)
 
 //=======================================================================================
 /*
-//TP_REG_CHIPID					0xA7
+//TP_REG_CHIPID				0xA7
 //CST816_CHIP_ID			0xB4
 NRF_DRV_TWI_XFER_TX
-
 */
 void read_tp_id(void)
 {
 	uint8_t tp_id = 0;
-  uint8_t reg_addr;
-  uint32_t err_code;
-	bool twi_flag;
-	
-	reg_addr = 0xA7;
 
-  nrf_drv_twi_tx(&m_twi, 0x15,&reg_addr,1,false); //false  true
-
-	while (m_xfer_done == false);
-	m_xfer_done = true;
- //	nrf_delay_ms(1);
-
-	err_code = nrf_drv_twi_rx(&m_twi, 0x15, &tp_id, 1);
-//	while (m_xfer_done == false){}
-//	m_xfer_done = true;
- 	nrf_delay_ms(1);
-	NRF_LOG_INFO(" tp_id:0x%x ",tp_id );
+	nrf_twi_rx(TP_REG_CHIPID, &tp_id, 1);
+	NRF_LOG_INFO("tp_id:0x%x ",tp_id );
 }
- 
-
-
