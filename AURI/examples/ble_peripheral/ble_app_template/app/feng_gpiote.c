@@ -121,7 +121,7 @@ void tp_interrupt_handler(void)
 
 	if(TP_type != TP_EVENT_MAX)
 	{
-		touch_panel_event_handle(TP_type, tp_temp[2], tp_temp[3]);
+		touch_panel_event_handle(TP_type, tp_temp[3], tp_temp[5]);
 	}
 }
 
