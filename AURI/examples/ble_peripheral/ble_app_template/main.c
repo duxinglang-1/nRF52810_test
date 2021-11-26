@@ -108,7 +108,7 @@
 #include "feng_twi.h"
 
 //=======================================================
-#define DEVICE_NAME                     "AURI_BLE"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "AURI_XB_TEST"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL              	4800 //3 sec                            /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION                0 //18000         						/**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -1744,6 +1744,11 @@ int main(void)
 {
 	bool erase_bonds;
 	uint32_t err_code;
+	
+	//dfu 10
+	//使能任一中断之前，将异步SVCI接口初始化为引导加载程序
+	err_code = ble_dfu_buttonless_async_svci_init();
+	APP_ERROR_CHECK(err_code);
 
 	//Initialize.
 	log_init();

@@ -68,5 +68,5 @@
 .\_build\test.o: ..\..\..\..\..\..\components\libraries\util\sdk_resources.h
 .\_build\test.o: ..\..\..\..\..\..\components\softdevice\s112\headers\nrf_sd_def.h
 .\_build\test.o: ..\..\..\..\..\..\modules\nrfx\drivers/nrfx_errors.h
-.\_build\test.o: ..\..\..\app\feng_fstorage.h
 .\_build\test.o: ..\..\..\AES\aes.h
+.\_build\test.o: ..\..\..\app\feng_fstorage.h
