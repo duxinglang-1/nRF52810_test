@@ -1,0 +1,152 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.27.0.0
+Copyright (C) 2018 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: rw c, august, LIC=JDA0P-MK9YE-AWZ2F-6N7EN-BWKZN-Z42AJ
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Professional  Version: 5.27.0.0
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 6 (build 750)
+Assembler:       Armasm.exe V5.06 update 6 (build 750)
+Linker/Locator:  ArmLink.exe V5.06 update 6 (build 750)
+Library Manager: ArmAr.exe V5.06 update 6 (build 750)
+Hex Converter:   FromElf.exe V5.06 update 6 (build 750)
+CPU DLL:         
+Dialog DLL:      
+Target DLL:      Segger\JL2CM3.dll V2.99.34.0
+Dialog DLL:      TCM.DLL V1.36.1.0
+ 
+<h2>Project:</h2>
+C:\Users\larry\Desktop\0909\AURI_NRF52810_20210906\AURI\examples\ble_peripheral\ble_app_template\pca10040e\s112\arm5_no_packs\ble_app_template_pca10040e_s112.uvprojx
+Project File Date:  09/23/2021
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 6 (build 750)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'flash_s112_nrf52_7.0.1_softdevice'
+Before Build - User command #1: attrib +R ..\..\..\..\..\..\components\softdevice\s112\hex\\*
+compiling main.c...
+..\..\..\main.c(58): error:  #5: cannot open source input file "nordic_common.h": No such file or directory
+  #include "nordic_common.h"
+..\..\..\main.c: 0 warnings, 1 error
+compiling app.c...
+..\..\..\app\app.h(10): error:  #5: cannot open source input file "nrf_log.h": No such file or directory
+  #include "nrf_log.h"
+..\..\..\app\app.c: 0 warnings, 1 error
+compiling nrfx_rng.c...
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_rng.c(41): error:  #5: cannot open source input file "nrfx.h": No such file or directory
+  #include <nrfx.h>
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_rng.c: 0 warnings, 1 error
+compiling feng_twi.c...
+..\..\..\app\feng_twi.h(7): error:  #5: cannot open source input file "nrf_drv_twi.h": No such file or directory
+  #include "nrf_drv_twi.h"
+..\..\..\app\feng_twi.c: 0 warnings, 1 error
+compiling nrf_drv_twi.c...
+..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_twi.h(44): error:  #5: cannot open source input file "nrfx.h": No such file or directory
+  #include <nrfx.h>
+..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_twi.c: 0 warnings, 1 error
+compiling feng_fstorage.c...
+..\..\..\app\app.h(10): error:  #5: cannot open source input file "nrf_log.h": No such file or directory
+  #include "nrf_log.h"
+..\..\..\app\feng_fstorage.c: 0 warnings, 1 error
+compiling test.c...
+..\..\..\app\app.h(10): error:  #5: cannot open source input file "nrf_log.h": No such file or directory
+  #include "nrf_log.h"
+..\..\..\app\test.c: 0 warnings, 1 error
+compiling nrfx_twim.c...
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_twim.c(41): error:  #5: cannot open source input file "nrfx.h": No such file or directory
+  #include <nrfx.h>
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_twim.c: 0 warnings, 1 error
+compiling nrf_drv_rng.c...
+..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_rng.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_rng.c: 0 warnings, 1 error
+compiling feng_gpiote.c...
+..\..\..\app\feng_gpiote.c(7): error:  #5: cannot open source input file "nrf_log.h": No such file or directory
+  #include "nrf_log.h"
+..\..\..\app\feng_gpiote.c: 0 warnings, 1 error
+compiling ble_link_ctx_manager.c...
+..\..\..\..\..\..\components\ble\ble_link_ctx_manager\ble_link_ctx_manager.h(60): error:  #5: cannot open source input file "ble_conn_state.h": No such file or directory
+  #include "ble_conn_state.h"
+..\..\..\..\..\..\components\ble\ble_link_ctx_manager\ble_link_ctx_manager.c: 0 warnings, 1 error
+compiling nrfx_wdt.c...
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_wdt.c(41): error:  #5: cannot open source input file "nrfx.h": No such file or directory
+  #include <nrfx.h>
+..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_wdt.c: 0 warnings, 1 error
+compiling aes.c...
+..\..\..\AES\aes.h(39): warning:  #1-D: last line of file ends without a newline
+  		
+..\..\..\AES\aes.c(566): warning:  #1-D: last line of file ends without a newline
+       
+..\..\..\AES\aes.c: 2 warnings, 0 errors
+compiling app_uart_fifo.c...
+..\..\..\..\..\..\components\libraries\uart\app_uart_fifo.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\libraries\uart\app_uart_fifo.c: 0 warnings, 1 error
+compiling app_fifo.c...
+..\..\..\..\..\..\components\libraries\fifo\app_fifo.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\libraries\fifo\app_fifo.c: 0 warnings, 1 error
+compiling ble_nus.c...
+..\..\..\..\..\..\components\ble\ble_services\ble_nus\ble_nus.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\ble\ble_services\ble_nus\ble_nus.c: 0 warnings, 1 error
+compiling retarget.c...
+..\..\..\..\..\..\components\libraries\uart\retarget.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\libraries\uart\retarget.c: 0 warnings, 1 error
+compiling ble_dfu_bonded.c...
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu_bonded.c(44): error:  #5: cannot open source input file "nrf_dfu_ble_svci_bond_sharing.h": No such file or directory
+  #include "nrf_dfu_ble_svci_bond_sharing.h"
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu_bonded.c: 0 warnings, 1 error
+compiling nrf_dfu_svci.c...
+..\..\..\..\..\..\components\libraries\bootloader\dfu\nrf_dfu_svci.c(43): error:  #5: cannot open source input file "nrf_log.h": No such file or directory
+  #include "nrf_log.h"
+..\..\..\..\..\..\components\libraries\bootloader\dfu\nrf_dfu_svci.c: 0 warnings, 1 error
+compiling ble_hids.c...
+..\..\..\..\..\..\components\ble\ble_services\ble_hids\ble_hids.c(44): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\ble\ble_services\ble_hids\ble_hids.c: 0 warnings, 1 error
+compiling ble_dfu.c...
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu.h(60): error:  #5: cannot open source input file "ble_srv_common.h": No such file or directory
+  #include "ble_srv_common.h"
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu.c: 0 warnings, 1 error
+compiling ble_dfu_unbonded.c...
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu_unbonded.c(44): error:  #5: cannot open source input file "nrf_dfu_ble_svci_bond_sharing.h": No such file or directory
+  #include "nrf_dfu_ble_svci_bond_sharing.h"
+..\..\..\..\..\..\components\ble\ble_services\ble_dfu\ble_dfu_unbonded.c: 0 warnings, 1 error
+compiling nrf_queue.c...
+..\..\..\..\..\..\components\libraries\queue\nrf_queue.c(40): error:  #5: cannot open source input file "sdk_common.h": No such file or directory
+  #include "sdk_common.h"
+..\..\..\..\..\..\components\libraries\queue\nrf_queue.c: 0 warnings, 1 error
+"..\..\..\..\..\..\components\softdevice\s112\hex\s112_nrf52_7.0.1_softdevice.hex" - 22 Error(s), 2 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: NordicSemiconductor
+                http://developer.nordicsemi.com/nRF5_SDK/pieces/nRF_DeviceFamilyPack/NordicSemiconductor.nRF_DeviceFamilyPack.8.38.0.pack
+                NordicSemiconductor.nRF_DeviceFamilyPack.8.38.0
+                Nordic Semiconductor nRF ARM devices Device Family Pack with BSD license.
+   * Component: Startup Version: 8.38.0
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_flash_s112_nrf52_7.0.1_softdevice
+  C:\Keil_v5\ARM\PACK\NordicSemiconductor\nRF_DeviceFamilyPack\8.38.0\Device\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.1.2
+
+   * Component: NordicSemiconductor::Device:Startup:8.38.0
+      Source file:   Device\Source\arm\arm_startup_nrf52810.s
+      Source file:   Device\Source\system_nrf52.c
+      Include file:  Device\Include\system_nrf52810.h
+      Include file:  Device\Include\system_nrf.h
+Target not created.
+Build Time Elapsed:  00:00:01
+</pre>
+</body>
+</html>
