@@ -1737,6 +1737,7 @@ void tp_init(void)
 	nrf_delay_ms(50);	
 
 	read_tp_id();
+	set_tp_auto_sleep();
 }
 
 void wdt_event_handler(void)
