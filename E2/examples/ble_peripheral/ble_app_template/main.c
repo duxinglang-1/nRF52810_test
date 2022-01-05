@@ -108,7 +108,7 @@
 #include "feng_twi.h"
 
 //=======================================================
-#define DEVICE_NAME                     "AURI_BLE"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "E2_BLE"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL              	4800 //3 sec                            /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION                0 //18000         						/**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -162,6 +162,7 @@ bool connectflag = false;
 bool disconnectflag =false;
 bool senddataflag = false;
 bool uart_wake_flag = true;
+bool tp_flag = false;
 
 static void uart_init(void);
 
@@ -175,9 +176,6 @@ void nrf52810_outio_irq(void);
 void senddatato_9160(void);
 void inio_irq_init(void);
 void in_pin_handler(nrf_drv_gpiote_pin_t pin,nrf_gpiote_polarity_t action);
-
-uint8_t IRQ_FLAG =0;
-void Read_Touch_Data_Interuputer_Processing(void);
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
@@ -1719,18 +1717,26 @@ static void uart_init(void)
 //static void tp_pin_handler(void)
 static void tp_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 { 
-	(void)pin;
-	(void)action;
-	IRQ_FLAG = 1;
+	tp_flag = true;
 }
 
-void Read_Touch_Data_Interuputer_Processing(void)
+void tp_init(void)
 {
-	if(IRQ_FLAG)
-	{
-		tp_interrupt_handler();
-		IRQ_FLAG=0;
-	}
+	uint32_t err_code;
+
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+	in_config.pull = NRF_GPIO_PIN_PULLUP;
+	err_code = nrf_drv_gpiote_in_init(TP_EINT_PIN, &in_config, tp_pin_handler);
+	APP_ERROR_CHECK(err_code);
+	nrf_drv_gpiote_in_event_enable(TP_EINT_PIN, true);
+	
+	nrf_gpio_cfg_output(TP_RSET_PIN);
+	nrf_gpio_pin_clear(TP_RSET_PIN);
+	nrf_delay_ms(10);
+	nrf_gpio_pin_set(TP_RSET_PIN);
+	nrf_delay_ms(50);	
+
+	read_tp_id();
 }
 
 void wdt_event_handler(void)
@@ -1788,8 +1794,9 @@ int main(void)
 	APP_ERROR_CHECK(err_code);
 	nrf_drv_wdt_enable();
 
-	NRF_LOG_INFO("++++++++++++++++++++++++++++");
-	
+	//Touch
+	tp_init();
+
 	/****系统初始化完成，NRF52810通过串口向NRF9160发送远成标志数据**********/
 	nrf52810_outio_irq();
 	systemStartFlag = 1;  //系统启动完成标志
@@ -1805,6 +1812,26 @@ int main(void)
 	{
 		nrf_drv_wdt_channel_feed(m_channel_id);
 
+		if(tp_flag)
+		{
+			tp_flag = false;
+			
+			if(!uart_wake_flag)
+			{
+				uart_init();
+				uart_wake_flag = true;
+			}
+			else
+			{
+				app_timer_stop(UART_TIME_id);
+				app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
+			}
+
+			nrf52810_outio_irq();
+			
+			tp_interrupt_handler();
+		}
+		
 		if(connect_flag)
 		{  
 			connect_flag = false; 
