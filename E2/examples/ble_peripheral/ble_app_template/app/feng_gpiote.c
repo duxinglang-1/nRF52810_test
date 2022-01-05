@@ -88,7 +88,7 @@ void tp_interrupt_handler(void)
 		tmpbuf[len-2] += tmpbuf[i];
 	
 	for(i=0;i<len;i++)
-		app_uart_put(tmpbuf[i]);		
+		app_uart_put(tmpbuf[i]);
 
 	switch(tp_temp[0])
 	{
