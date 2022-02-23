@@ -50,6 +50,7 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
         break;
 
     default:
+		m_xfer_done = true;
         break;
     }
 }
