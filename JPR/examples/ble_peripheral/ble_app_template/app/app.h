@@ -14,7 +14,7 @@
 extern bool	judg_app_flag;
 extern uint32_t	GUARD_TIME_SECONDS;
 extern uint8_t device_address[DEVICE_ADDRESS_LEN];
-extern uint8_t ble_work_status;
+extern uint8_t ble_work_status;	//0:off 1:sleep 2:advertising 3:connected
 
 /*************************************************************************************************************************
 * ID ´Ó 0xFFB0 ¿ªÊ¼

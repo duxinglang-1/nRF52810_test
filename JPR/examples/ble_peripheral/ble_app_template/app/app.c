@@ -48,7 +48,7 @@ StarFrame Datalength  ID 		  Status	Control	CRC8	EndFrame
 //================================================================
 bool connect_flag;
 bool judg_app_flag;
-uint8_t	ble_work_status;
+uint8_t	ble_work_status;	//0:off 1:sleep 2:advertising 3:connected
 uint32_t GUARD_TIME_SECONDS=0;
 uint8_t device_address[DEVICE_ADDRESS_LEN];
 uint8_t	g_aes_in[16]; //全局加密解密输入buff
