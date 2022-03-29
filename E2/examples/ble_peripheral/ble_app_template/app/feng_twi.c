@@ -1,21 +1,16 @@
-#include "feng_twi.h"
- 
 #include <stdio.h>
 #include "boards.h"
 #include "app_util_platform.h"
 #include "app_error.h"
 #include "nrf_drv_twi.h"
 #include "nrf_delay.h"
-
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
- 
 #include "nrf_gpio.h"
 #include "nrfx_twim.h"
 #include "nrf52810.h"
-
+#include "feng_twi.h"
 #include "feng_gpiote.h"
 //=======================================================================
 
@@ -57,7 +52,7 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 /* ***********************************************************
 
 */
-void twi_init (void)
+void twi_init(void)
 {
 	static ret_code_t err_code;
 
@@ -72,27 +67,39 @@ void twi_init (void)
     err_code = nrf_drv_twi_init(&m_twi, &twi_tp_config, twi_handler, NULL);
     APP_ERROR_CHECK(err_code);
 
-    nrf_drv_twi_enable(&m_twi); 		
+    nrf_drv_twi_enable(&m_twi);
 }
 
 //wrtie value to reg
 void nrf_twi_tx(uint8_t reg_addr, uint8_t reg_value)
 {
+	ret_code_t err_code;
 	uint8_t reg[2] = {reg_addr, reg_value};
 
 	m_xfer_done = false;
-	nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, reg, sizeof(reg), false);
+	err_code = nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, reg, sizeof(reg), false);
+	if(err_code != NRF_SUCCESS)
+		return;
+	
 	while(!m_xfer_done);
 }
 
 void nrf_twi_rx(uint8_t reg_addr, uint8_t *p_data, uint8_t length)
 {
+	ret_code_t err_code;
+	
 	m_xfer_done = false;
-	nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, &reg_addr, sizeof(reg_addr), false);
+	err_code = nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, &reg_addr, sizeof(reg_addr), false);
+	if(err_code != NRF_SUCCESS)
+		return;
+	
   	while(!m_xfer_done);
 
 	m_xfer_done = false;
-	nrf_drv_twi_rx(&m_twi, TP_I2C_ADDRESS, p_data, length);
+	err_code = nrf_drv_twi_rx(&m_twi, TP_I2C_ADDRESS, p_data, length);
+	if(err_code != NRF_SUCCESS)
+		return;
+
   	while(!m_xfer_done);
 }
 
