@@ -154,8 +154,8 @@
 #define MAX_BUFFER_ENTRIES                  5   
 #define INPUT_REPORT_KEYS_MAX_LEN           8   
 
-#define NRF52810_IRQ	16
-#define NRF9160_IRQ		18
+#define MCU_WAKE_PIN	16
+#define MCU_INT_PIN		18
 
 bool uartflag = false;
 bool connectflag = false;
@@ -1889,26 +1889,25 @@ void send_data_app(uint8_t *pbuff, uint16_t	pdata_len)
 
 void irqio_init(void)
 {
-	nrf_gpio_cfg_output(NRF52810_IRQ);
-	nrf_gpio_pin_clear(NRF52810_IRQ);
+	nrf_gpio_cfg_output(MCU_WAKE_PIN);
+	nrf_gpio_pin_clear(MCU_WAKE_PIN);
 }	
 
 void nrf52810_outio_set(void)
 {
-	nrf_gpio_pin_set(NRF52810_IRQ);
+	nrf_gpio_pin_set(MCU_WAKE_PIN);
 }	
 
 void nrf52810_outio_reset(void)
 {
-	nrf_gpio_pin_clear(NRF52810_IRQ);
+	nrf_gpio_pin_clear(MCU_WAKE_PIN);
 }	
 
 void nrf52810_outio_irq(void)
 {
-	nrf_gpio_pin_set(NRF52810_IRQ);
+	nrf_gpio_pin_set(MCU_WAKE_PIN);
 	nrf_delay_ms(10);
-	nrf_gpio_pin_clear(NRF52810_IRQ);
-
+	nrf_gpio_pin_clear(MCU_WAKE_PIN);
 }	
 
 void in_pin_handler(nrf_drv_gpiote_pin_t pin,nrf_gpiote_polarity_t action)
@@ -1937,10 +1936,10 @@ void inio_irq_init(void)
 	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(1);
 	in_config.pull = NRF_GPIO_PIN_PULLDOWN;
 	
-	err_code = nrf_drv_gpiote_in_init(NRF9160_IRQ,&in_config,in_pin_handler);
+	err_code = nrf_drv_gpiote_in_init(MCU_INT_PIN,&in_config,in_pin_handler);
 	APP_ERROR_CHECK(err_code);
 	
-	nrf_drv_gpiote_in_event_enable(NRF9160_IRQ,true);
+	nrf_drv_gpiote_in_event_enable(MCU_INT_PIN,true);
 }	
 
 void senddatato_9160(void)
