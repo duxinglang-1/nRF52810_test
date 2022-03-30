@@ -1,10 +1,7 @@
 #include "app.h"
 #include "ble_gap.h"
 #include "ble_advertising.h"
-
-
 #include "nrf_queue.h"  
-
 #include <stdio.h>
 #include <stdint.h>
 #include "nrf_delay.h"
@@ -15,37 +12,9 @@
 #include "ble_nus.h"
 #include "app_timer.h"
 #include "app_uart.h"
-//==================================================================
-/*
 
-0					1						3				5				6				7			8
-StarFrame Datalength  ID 		  Status	Control	CRC8	EndFrame
-0XAB			0X00~0XFF		0xFF52	0X80		
+#define FW_VERSION	"E2_NRF52810_FW_V1.0.0_20220330"
 
-
-包的总长度：从ID ~包尾
-包的校验和：从包头~CRC 之前
-示例
-		buff[0]=0xAB ;
-		buff[1]=0x00 ;
-		buff[2]=0x05 ;
-		
-		buff[3]=0xFF ;
-		buff[4]=0x59 ;
-		
-		buff[5]=0x80 ;
-		buff[6]=0x00 ;
-		for(uint8_t i=0;i<7;i++)
-			buff[7]=buff[7]+buff[i] ;//crc
-		
-		buff[8]=0x88 ;
-		sendlength = 9 ;
-		error = ble_nus_data_send(&m_nus, buff, &sendlength, m_conn_handle);
-		NRF_LOG_INFO("error:%x \r\n",error);
-
-*/
-
-//================================================================
 bool connect_flag;
 bool judg_app_flag;
 uint8_t	ble_work_status;	//0:off 1:sleep 2:advertising 3:connected
@@ -224,7 +193,6 @@ void send_ble_device_mac(void)
 		app_uart_put(buff[i]);		
 }
 
-//RM_SW001_NRF52810_FW_V2.1_20201130.hex
 void send_ble_version(void)
 {
 	uint8_t mac_buff[128] = {0};
@@ -234,7 +202,7 @@ void send_ble_version(void)
 	mac_buff[len++] = 0xAB;
 	//data len
 	mac_buff[len++] = 0x00;
-	mac_buff[len++] = 0x28;
+	mac_buff[len++] = 0x24;
 	//ID
 	mac_buff[len++] = 0xFF;
 	mac_buff[len++] = 0xB2;
@@ -242,41 +210,9 @@ void send_ble_version(void)
 	mac_buff[len++] = 0x80;
 	//control
 	mac_buff[len++] = 0x00; 
-	//data RM_SW001_NRF52810_FW_V2.2_20201208
-	mac_buff[len++] = 'R';
-	mac_buff[len++] = 'M';
-	mac_buff[len++] = '_';
-	mac_buff[len++] = 'S';
-	mac_buff[len++] = 'W';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '1';
-	mac_buff[len++] = '_';
-	mac_buff[len++] = 'N';
-	mac_buff[len++] = 'R';
-	mac_buff[len++] = 'F';
-	mac_buff[len++] = '5';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '8';
-	mac_buff[len++] = '1';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '_';
-	mac_buff[len++] = 'F';
-	mac_buff[len++] = 'W';
-	mac_buff[len++] = '_';
-	mac_buff[len++] = 'V';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '.';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '_';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '1';
-	mac_buff[len++] = '2';
-	mac_buff[len++] = '0';
-	mac_buff[len++] = '8';
+	//version
+	memcpy(&mac_buff[len], FW_VERSION, strlen(FW_VERSION));
+	len += strlen(FW_VERSION);
 	//crc
 	mac_buff[len++] = 0x00;
 	//end
@@ -286,7 +222,7 @@ void send_ble_version(void)
 		mac_buff[len-2] += mac_buff[i];
 
 	for(i=0;i<len;i++)
-		app_uart_put(mac_buff[i]);		
+		app_uart_put(mac_buff[i]);
 }
 
 void get_ble_work_stutes(void)
