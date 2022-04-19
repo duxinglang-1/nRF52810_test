@@ -27,9 +27,9 @@ static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
  */
 void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 {
-    switch (p_event->type)
-    {
-    case NRF_DRV_TWI_EVT_DONE:
+	switch(p_event->type)
+	{
+	case NRF_DRV_TWI_EVT_DONE:
 		switch(p_event->xfer_desc.type)
 		{
 		case NRF_DRV_TWI_XFER_TX:
@@ -41,13 +41,12 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 		case NRF_DRV_TWI_XFER_TXTX:
 			break;
 		}
-        m_xfer_done = true;
-        break;
-
-    default:
 		m_xfer_done = true;
-        break;
-    }
+		break;
+
+	default:
+		break;
+	}
 }
 /* ***********************************************************
 
