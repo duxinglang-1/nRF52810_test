@@ -9,7 +9,8 @@
 #define TP_RSET_PIN			(10)
 
 #define TP_I2C_ADDRESS		0x15
-#define TP_CHIP_ID			0xB4
+#define TP_CST816S_ID		0xB4
+#define TP_CST816T_ID		0xB5
 
 #define TP_REG_GESTURE				0x01
 #define TP_REG_FINGER_NUM			0x02
@@ -69,8 +70,16 @@ typedef enum
 	TP_EVENT_DOUBLE_CLICK,
 	TP_EVENT_LONG_PRESS,
 	TP_EVENT_MAX
-}tp_event;
+}TP_EVENT;
 
+typedef enum
+{
+	TP_CST816S = 0xB4,
+	TP_CST816T = 0xB5,
+	TP_MAX 	   = 0xFF,
+}TP_CHIP_TYPE;
+
+void read_tp_id(uint8_t *sensor_id);
 void tp_interrupt_handler(void);
 void Nrf52810_Uart_Send_Data_Test(void);
 void system_upgrade_info_send(void);

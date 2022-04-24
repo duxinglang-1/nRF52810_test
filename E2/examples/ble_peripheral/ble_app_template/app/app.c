@@ -13,7 +13,7 @@
 #include "app_timer.h"
 #include "app_uart.h"
 
-#define FW_VERSION	"E2_NRF52810_FW_V1.0.0_20220330"
+#define FW_VERSION	"E2_NRF52810_FW_V1.0.1_20220424"
 
 bool connect_flag;
 bool judg_app_flag;

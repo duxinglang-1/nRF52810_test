@@ -161,8 +161,7 @@ bool uartflag = false;
 bool connectflag = false;
 bool disconnectflag =false;
 bool senddataflag = false;
-bool uart_wake_flag = true;
-bool tp_flag = false;
+bool uart_is_wake = true;
 
 static void uart_init(void);
 
@@ -418,27 +417,40 @@ uint32_t DFU_timer_init(void)
 
 
 APP_TIMER_DEF(UART_TIME_id);
-void UART_timer_handler(void * p_context)
+void UART_sleep_timer_handler(void * p_context)
 {
 	uint32_t err_code;
+	
 	UNUSED_PARAMETER(p_context);
 	
-	uart_wake_flag = false;
 	nrf_uart_task_trigger(NRF_UART0, NRF_UART_TASK_STOPRX);
 	nrf_uart_event_clear(NRF_UART0, NRF_UART_EVENT_RXDRDY);
 	err_code = app_uart_close();
 	APP_ERROR_CHECK(err_code);
+
+	uart_is_wake = false;
 }
 
 uint32_t UART_timer_init(void)
 {
 	uint32_t err_code;
 	
-	err_code = app_timer_create(&UART_TIME_id,APP_TIMER_MODE_SINGLE_SHOT,UART_timer_handler);
+	err_code = app_timer_create(&UART_TIME_id, APP_TIMER_MODE_SINGLE_SHOT, UART_sleep_timer_handler);
 	APP_ERROR_CHECK(err_code); 
 	return err_code;
 }
 
+void UART_WakeUp(void)
+{
+	app_timer_stop(UART_TIME_id);
+	app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
+
+	if(uart_is_wake)
+		return;
+	
+	uart_init();
+	uart_is_wake = true;
+}
 
 /**@brief Function for handling the YYY Service events.
  * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
@@ -1714,32 +1726,6 @@ static void uart_init(void)
 }
 /**@snippet [UART Initialization] */
 
-//static void tp_pin_handler(void)
-static void tp_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{ 
-	tp_flag = true;
-}
-
-void tp_init(void)
-{
-	uint32_t err_code;
-
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
-	in_config.pull = NRF_GPIO_PIN_PULLUP;
-	err_code = nrf_drv_gpiote_in_init(TP_EINT_PIN, &in_config, tp_pin_handler);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_gpiote_in_event_enable(TP_EINT_PIN, true);
-	
-	nrf_gpio_cfg_output(TP_RSET_PIN);
-	nrf_gpio_pin_clear(TP_RSET_PIN);
-	nrf_delay_ms(10);
-	nrf_gpio_pin_set(TP_RSET_PIN);
-	nrf_delay_ms(50);	
-
-	read_tp_id();
-	set_tp_auto_sleep();
-}
-
 void wdt_event_handler(void)
 {
     //NOTE: The max amount of time we can spend in WDT interrupt is two cycles of 32768[Hz] clock - after that, reset occurs
@@ -1813,25 +1799,7 @@ int main(void)
 	{
 		nrf_drv_wdt_channel_feed(m_channel_id);
 
-		if(tp_flag)
-		{
-			tp_flag = false;
-			
-			if(!uart_wake_flag)
-			{
-				uart_init();
-				uart_wake_flag = true;
-			}
-			else
-			{
-				app_timer_stop(UART_TIME_id);
-				app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-			}
-
-			nrf52810_outio_irq();
-			
-			tp_interrupt_handler();
-		}
+		TpMsgProc();
 		
 		if(connect_flag)
 		{  
@@ -1912,16 +1880,7 @@ void nrf52810_outio_irq(void)
 
 void in_pin_handler(nrf_drv_gpiote_pin_t pin,nrf_gpiote_polarity_t action)
 {
-	if(!uart_wake_flag)
-	{
-		uart_init();
-		uart_wake_flag = true;
-	}
-	else
-	{
-		app_timer_stop(UART_TIME_id);
-		app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-	}
+	UART_WakeUp();
 	
 	NRF_LOG_INFO("============= ble io in irq ================ \r\n");
 }	
@@ -1950,16 +1909,7 @@ void senddatato_9160(void)
 	{
 		connectflag = false;
 
-		if(!uart_wake_flag)
-		{
-			uart_init();
-			uart_wake_flag = true;
-		}
-		else
-		{
-			app_timer_stop(UART_TIME_id);
-			app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-		}
+		UART_WakeUp();
 		
 		nrf52810_outio_irq();
 		app_connect();
@@ -1970,16 +1920,7 @@ void senddatato_9160(void)
 	{
 		disconnectflag = false;
 
-		if(!uart_wake_flag)
-		{
-			uart_init();
-			uart_wake_flag =true;
-		}
-		else
-		{
-			app_timer_stop(UART_TIME_id);
-			app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-		}
+		UART_WakeUp();
 
 		nrf52810_outio_irq();
 		app_disconnect();
@@ -2076,16 +2017,7 @@ void senddatato_9160(void)
 				}					
 				if((command_id != 0xFF30)&&(command_id != 0xFF58)&&(command_id != 0xFF21)&&(judg_app_flag == true))
 				{
-					if(!uart_wake_flag)
-					{
-						uart_init();
-						uart_wake_flag = true;
-					}
-					else
-					{
-						app_timer_stop(UART_TIME_id);
-						app_timer_start(UART_TIME_id, APP_TIMER_TICKS(5000), NULL);
-					}
+					UART_WakeUp();
 
 					nrf52810_outio_irq();
 					

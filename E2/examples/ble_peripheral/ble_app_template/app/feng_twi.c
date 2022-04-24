@@ -127,22 +127,3 @@ void stop_task(void)
 {
 	nrf_drv_twi_stopped_event_get(&m_twi);
 }
-
-void set_tp_auto_sleep(void)
-{
-	nrf_twi_tx(TP_REG_DIS_AUTO_SLEEP, 0);
-}
-
-//=======================================================================================
-/*
-//TP_REG_CHIPID				0xA7
-//CST816_CHIP_ID			0xB4
-NRF_DRV_TWI_XFER_TX
-*/
-void read_tp_id(void)
-{
-	uint8_t tp_id = 0;
-
-	nrf_twi_rx(TP_REG_CHIPID, &tp_id, 1);
-	NRF_LOG_INFO("tp_id:0x%x ",tp_id );
-}
