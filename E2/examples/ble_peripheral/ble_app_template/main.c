@@ -1678,11 +1678,9 @@ void uart_event_handle(app_uart_evt_t * p_event)
 		break;
 
     case APP_UART_DATA: 
-		NRF_LOG_INFO(" ====== APP_UART_DATA ");		
         break;
 
     case APP_UART_TX_EMPTY:
-		NRF_LOG_INFO(" ====== APP_UART_TX_EMPTY ");
         break;
 
     case APP_UART_FIFO_ERROR:

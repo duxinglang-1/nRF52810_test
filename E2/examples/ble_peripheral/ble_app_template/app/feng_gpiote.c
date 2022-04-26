@@ -72,7 +72,7 @@ void tp_interrupt_handler(void)
 	//packet head
 	tmpbuf[len++] = 0xAB;
 	//data_len
-	tmpbuf[len++] = 0x00;	
+	tmpbuf[len++] = 0x00;
 	tmpbuf[len++] = 0x0A;
 	//data ID
 	tmpbuf[len++] = 0xFF;
@@ -102,34 +102,42 @@ void tp_interrupt_handler(void)
 	{
 	case GESTURE_NONE:
 		break;
+
 	case GESTURE_MOVING_UP:
 		TP_type = TP_EVENT_MOVING_UP;
 		break;
+
 	case GESTURE_MOVING_DOWN:
 		TP_type = TP_EVENT_MOVING_DOWN;
 		break;
+
 	case GESTURE_MOVING_LEFT:
 		TP_type = TP_EVENT_MOVING_LEFT;
 		break;
+
 	case GESTURE_MOVING_RIGHT:
 		TP_type = TP_EVENT_MOVING_RIGHT;
 		break;
+
 	case GESTURE_SINGLE_CLICK:
 		TP_type = TP_EVENT_SINGLE_CLICK;
 		break;
+
 	case GESTURE_DOUBLE_CLICK:
 		TP_type = TP_EVENT_DOUBLE_CLICK;
 		break;
+
 	case GESTURE_LONG_PRESS:
 		TP_type = TP_EVENT_LONG_PRESS;
 		break;
+
 	default:
 		break;
 	}
 
 	if(TP_type != TP_EVENT_MAX)
 	{
-		touch_panel_event_handle(TP_type, tp_temp[3], tp_temp[5]);
+		touch_panel_event_handle(TP_type, (0x0f&tp_temp[2])<<8 | tp_temp[3], (0x0f&tp_temp[4])<<8 | tp_temp[5]);
 	}
 }
 
