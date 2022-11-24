@@ -1743,6 +1743,7 @@ int main(void)
 
 	//Initialize.
 	log_init();
+	NRF_LOG_INFO("main started.");
 	uart_init();
 	twi_init();//i2c
 	fs_init();
@@ -1764,7 +1765,6 @@ int main(void)
 	guard_time_init();
 
 	//Start execution.
-	NRF_LOG_INFO("main started.");
 	application_timers_start();
 
 	advertising_start(false);	 
