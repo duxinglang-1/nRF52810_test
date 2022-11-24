@@ -41,12 +41,13 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 		case NRF_DRV_TWI_XFER_TXTX:
 			break;
 		}
-		m_xfer_done = true;
 		break;
 
 	default:
 		break;
 	}
+
+	m_xfer_done = true;
 }
 /* ***********************************************************
 
@@ -79,27 +80,27 @@ void nrf_twi_tx(uint8_t reg_addr, uint8_t reg_value)
 	err_code = nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, reg, sizeof(reg), false);
 	if(err_code != NRF_SUCCESS)
 		return;
-	
+
 	while(!m_xfer_done);
 }
 
 void nrf_twi_rx(uint8_t reg_addr, uint8_t *p_data, uint8_t length)
 {
 	ret_code_t err_code;
-	
+
 	m_xfer_done = false;
 	err_code = nrf_drv_twi_tx(&m_twi, TP_I2C_ADDRESS, &reg_addr, sizeof(reg_addr), false);
 	if(err_code != NRF_SUCCESS)
 		return;
-	
-  	while(!m_xfer_done);
+
+	while(!m_xfer_done);
 
 	m_xfer_done = false;
 	err_code = nrf_drv_twi_rx(&m_twi, TP_I2C_ADDRESS, p_data, length);
 	if(err_code != NRF_SUCCESS)
 		return;
 
-  	while(!m_xfer_done);
+	while(!m_xfer_done);
 }
 
 
@@ -110,7 +111,7 @@ void disable_nrf_twi(void)
 
 void enable_nrf_twi(void)
 {
-	 nrf_drv_twi_enable(&m_twi);
+	nrf_drv_twi_enable(&m_twi);
 }
 
 bool is_twi_busy(void)
@@ -118,7 +119,6 @@ bool is_twi_busy(void)
 	bool flag;
 	
 	flag = nrf_drv_twi_is_busy(&m_twi);
-	
 	return flag;
 }
 
