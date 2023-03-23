@@ -110,7 +110,7 @@
 //=======================================================
 #define DEVICE_NAME                     "E2_V3_BLE"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL              	1600*1 //3 sec                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_INTERVAL              	1600*1 //1 sec                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION                0 //18000         						/**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
@@ -1094,6 +1094,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			break;
 		}
 		NRF_LOG_INFO("Disconnected.");
+		ble_work_status = 0x02;
 		disconnectflag = true;
 		break;
 
