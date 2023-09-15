@@ -110,7 +110,7 @@
 //=======================================================
 #define DEVICE_NAME                     "E2_V3_BLE"	//"Nordic_Template"     /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL              	1600*1 //1 sec                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_INTERVAL              	1600*1 // 1 sec                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION                0 //18000         						/**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
@@ -200,7 +200,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
 };
 
 
-static void advertising_start(bool erase_bonds);
+static void advertising_start(void);
 
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -1329,7 +1329,7 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 
 	case PM_EVT_PEERS_DELETE_SUCCEEDED:
 		NRF_LOG_INFO("[%s] PM_EVT_PEERS_DELETE_SUCCEEDED", __func__);
-		advertising_start(false);
+		advertising_start();
 		break; 
 
 	case PM_EVT_PEERS_DELETE_FAILED:
@@ -1566,26 +1566,25 @@ m_advertising
 										 
 void advertising_stop(ble_advertising_t * const p_advertising)
 {
-	sd_ble_gap_adv_stop(p_advertising->adv_handle);
-	ble_work_status = 0x00;
+	if(ble_work_status != 0x00)
+	{
+		sd_ble_gap_adv_stop(p_advertising->adv_handle);
+		ble_work_status = 0x00;
+	}
 }
 
 /**@brief Function for starting advertising.
  */
-static void advertising_start(bool erase_bonds)
+static void advertising_start(void)
 {
-    if(erase_bonds == true)
-    {
-    	advertising_stop(&m_advertising);
-		//delete_bonds();
-        //Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED event
-    }
-    else
-    {
-        ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+    ret_code_t err_code;
+
+	if(ble_work_status != 0x02)
+	{
+		err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+		APP_ERROR_CHECK(err_code);
 		ble_work_status = 0x02;
-        APP_ERROR_CHECK(err_code);
-    }
+	}
 }
 
 
@@ -1644,8 +1643,16 @@ void uart_event_handle(app_uart_evt_t * p_event)
 				break;
 
 			case 0xFFB5://set ble work status from 9160 0:off,1:on,2:wake,3:sleep
-				advertising_stop(&m_advertising);
-				advertising_start(false);	
+				switch(data_array[6])
+				{
+				case 0:
+					advertising_stop(&m_advertising);
+					break;
+					
+				case 1:
+					advertising_start();
+					break;
+				}	
 				break;
 
 			default:
@@ -1766,7 +1773,7 @@ int main(void)
 	//Start execution.
 	application_timers_start();
 
-	advertising_start(false);	 
+	advertising_start();	 
 	err_code = nrf_drv_rng_init(NULL);
 	APP_ERROR_CHECK(err_code);
 

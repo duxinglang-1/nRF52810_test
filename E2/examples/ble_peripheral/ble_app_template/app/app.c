@@ -13,12 +13,12 @@
 #include "app_timer.h"
 #include "app_uart.h"
 
-#define FW_VERSION	"E2_NRF52810_FW_V1.0.3_20230322"
+#define FW_VERSION	"E2_NRF52810_FW_V1.0.4_20230915"
 
 bool connect_flag;
 bool judg_app_flag;
-uint8_t	ble_work_status;	//0:off 1:sleep 2:advertising 3:connected
-uint32_t GUARD_TIME_SECONDS=0;
+uint8_t	ble_work_status = 0;	//0:off 1:sleep 2:advertising 3:connected
+uint32_t GUARD_TIME_SECONDS = 0;
 uint8_t device_address[DEVICE_ADDRESS_LEN];
 uint8_t	g_aes_in[16]; //全局加密解密输入buff
 uint8_t	g_aes_out[16];//解密全局buff
